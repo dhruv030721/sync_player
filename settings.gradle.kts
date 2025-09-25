@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Offline Netflix"
+rootProject.name = "Meetflix"
 include(":app")
  
