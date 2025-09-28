@@ -4,8 +4,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import android.net.Uri
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,11 +33,7 @@ import com.example.meetflix.ui.components.MFXButton
 import com.example.meetflix.ui.theme.DarkGrayColor
 import com.example.meetflix.ui.theme.Geist_Font
 import com.example.meetflix.ui.theme.PrimaryColor
-import com.example.meetflix.ui.theme.PurpleBtnBGColor
-import com.example.meetflix.ui.theme.PurpleBtnBorderColor
 import com.example.meetflix.ui.theme.Zinc700Color
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.example.meetflix.ui.theme.BloodRed
 import com.example.meetflix.ui.theme.PrimaryBtnAlpha
 
 @Composable
@@ -59,7 +57,16 @@ fun HomeScreen(innerPadding: PaddingValues) {
             }
         }
     }
-
+    Column(
+        modifier = Modifier.fillMaxSize().padding(top = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            painterResource(R.drawable.meetflix_logo),
+            "Logo",
+            modifier = Modifier.size(100.dp),
+        )
+    }
     Column(
         modifier = Modifier
             // this for safe area

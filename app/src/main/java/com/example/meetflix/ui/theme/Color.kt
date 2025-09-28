@@ -24,7 +24,7 @@ val BloodRed = Color(0xFF65000B)
 
 // App Colors
 val Old_PrimaryColor = Color(0xFF7C3BED)
-val PrimaryColor = Color(0xFF800000)
+val PrimaryColor = Color(0xFF8b1210)
 const val PrimaryBtnAlpha = 0.5f
 val Gray_Color = Color(0xFF2E2E38)
 val DarkGrayColor = Color(0xFF1A1A1F)
