@@ -1,7 +1,5 @@
-package com.example.meetflix.ui.components
+package com.meetflix.ui.components
 
-import android.R.attr.textColor
-import android.widget.Space
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,17 +18,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
-import com.example.meetflix.R
-import com.example.meetflix.ui.theme.Geist_Font
-import com.example.meetflix.ui.theme.PrimaryColor
+import com.meetflix.ui.theme.Geist_Font
 
 @Composable
 fun MFXButton(
     text: String,
     modifier: Modifier,
     icon: Int? = null,
+    iconSize: Dp = 20.dp,
     height: Dp = 50.dp,
     cornerRadius: Dp = 10.dp,
     bgColor: Color = Color(0xFF7C3BED),
@@ -63,7 +59,7 @@ fun MFXButton(
             Icon(
                 painter = painterResource(id = it),
                 contentDescription = "Button Icon",
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(iconSize),
                 tint = textColor
             )
         }

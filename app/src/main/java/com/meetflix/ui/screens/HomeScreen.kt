@@ -1,13 +1,13 @@
-package com.example.meetflix.ui.screens
+package com.meetflix.ui.screens
 
+import android.database.Cursor
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.net.Uri
-import android.util.Log
+import android.provider.OpenableColumns
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -28,13 +29,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.meetflix.R
-import com.example.meetflix.ui.components.MFXButton
-import com.example.meetflix.ui.theme.DarkGrayColor
-import com.example.meetflix.ui.theme.Geist_Font
-import com.example.meetflix.ui.theme.PrimaryColor
-import com.example.meetflix.ui.theme.Zinc700Color
-import com.example.meetflix.ui.theme.PrimaryBtnAlpha
+import com.meetflix.R
+import com.meetflix.ui.components.MFXButton
+import com.meetflix.ui.theme.DarkGrayColor
+import com.meetflix.ui.theme.Geist_Font
+import com.meetflix.ui.theme.PrimaryColor
+import com.meetflix.ui.theme.Zinc700Color
+import com.meetflix.ui.theme.PrimaryBtnAlpha
 
 @Composable
 fun HomeScreen(innerPadding: PaddingValues) {
@@ -57,30 +58,26 @@ fun HomeScreen(innerPadding: PaddingValues) {
             }
         }
     }
-    Column(
-        modifier = Modifier.fillMaxSize().padding(top = 60.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Image(
-            painterResource(R.drawable.meetflix_logo),
-            "Logo",
-            modifier = Modifier.size(100.dp),
-        )
-    }
+
     Column(
         modifier = Modifier
-            // this for safe area
             .padding(innerPadding)
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Image(
+            painterResource(R.drawable.meetflix_logo_new),
+            "Logo",
+            modifier = Modifier.size(100.dp).alpha(0.5f),
+        )
+        Spacer(modifier = Modifier.height(50.dp))
         Text(
             text = "Upload & Stream",
             color = PrimaryColor,
             fontWeight = FontWeight.Bold,
-            fontSize = 30.sp,
+            fontSize = 25.sp,
             fontFamily = Geist_Font,
             textAlign = TextAlign.Center
         )
@@ -88,9 +85,10 @@ fun HomeScreen(innerPadding: PaddingValues) {
         Text(
             text = "Drag and drop your files or click to browse. Upload your documents, images, and files securely.\n",
             color = Color.Gray,
-            fontSize = 16.sp,
+            fontSize = 12.sp,
             fontFamily = Geist_Font,
             textAlign = TextAlign.Center,
+            letterSpacing = (-0.5).sp,
             modifier = Modifier.padding(horizontal = 12.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -98,7 +96,7 @@ fun HomeScreen(innerPadding: PaddingValues) {
             modifier = Modifier
                 .clip(RoundedCornerShape(16.dp))
                 .border(0.1.dp, Zinc700Color, RoundedCornerShape(16.dp))
-                .background(DarkGrayColor)
+                .background(DarkGrayColor.copy(0.5f))
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -144,13 +142,16 @@ fun HomeScreen(innerPadding: PaddingValues) {
                     text = "Upload your files",
                     color = Color.White,
                     textAlign = TextAlign.Center,
+                    fontFamily = Geist_Font,
                     fontSize = 18.sp,
                 )
                 Spacer(modifier = Modifier.height(5.dp))
                 Text(
                     text = "Drag and drop your files here, or click to browse",
                     textAlign = TextAlign.Center,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    fontFamily = Geist_Font,
+                    fontSize = 12.sp
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 MFXButton(
@@ -170,6 +171,6 @@ fun HomeScreen(innerPadding: PaddingValues) {
     }
 }
 
-fun android.database.Cursor.getColumnIndexOpenableColumnsDisplayName(): Int {
-    return getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+fun Cursor.getColumnIndexOpenableColumnsDisplayName(): Int {
+    return getColumnIndex(OpenableColumns.DISPLAY_NAME)
 }
