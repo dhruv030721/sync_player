@@ -1,4 +1,4 @@
-package com.meetflix.ui.screens
+package com.meetflix.home.presentation.screen
 
 import android.database.Cursor
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,12 +30,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetflix.R
-import com.meetflix.ui.components.MFXButton
-import com.meetflix.ui.theme.DarkGrayColor
-import com.meetflix.ui.theme.Geist_Font
-import com.meetflix.ui.theme.PrimaryColor
-import com.meetflix.ui.theme.Zinc700Color
-import com.meetflix.ui.theme.PrimaryBtnAlpha
+import com.meetflix.core.ui.components.MFXButton
+import com.meetflix.core.ui.theme.DarkGrayColor
+import com.meetflix.core.ui.theme.Geist_Font
+import com.meetflix.core.ui.theme.PrimaryColor
+import com.meetflix.core.ui.theme.Zinc700Color
+import com.meetflix.core.ui.theme.PrimaryBtnAlpha
 
 @Composable
 fun HomeScreen(innerPadding: PaddingValues) {
@@ -70,7 +70,9 @@ fun HomeScreen(innerPadding: PaddingValues) {
         Image(
             painterResource(R.drawable.meetflix_logo_new),
             "Logo",
-            modifier = Modifier.size(100.dp).alpha(0.5f),
+            modifier = Modifier
+                .size(100.dp)
+                .alpha(0.5f),
         )
         Spacer(modifier = Modifier.height(50.dp))
         Text(
@@ -101,7 +103,7 @@ fun HomeScreen(innerPadding: PaddingValues) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (pickedFileName != null) {
-                Column (
+                Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(22.dp)
                 ) {

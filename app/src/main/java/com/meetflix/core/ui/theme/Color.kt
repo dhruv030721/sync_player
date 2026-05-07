@@ -1,4 +1,4 @@
-package com.meetflix.ui.theme
+package com.meetflix.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

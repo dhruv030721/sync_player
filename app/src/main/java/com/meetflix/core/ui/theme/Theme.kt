@@ -1,4 +1,4 @@
-package com.meetflix.ui.theme
+package com.meetflix.core.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

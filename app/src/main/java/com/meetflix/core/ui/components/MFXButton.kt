@@ -1,4 +1,4 @@
-package com.meetflix.ui.components
+package com.meetflix.core.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
-import com.meetflix.ui.theme.Geist_Font
+import com.meetflix.core.ui.theme.Geist_Font
 
 @Composable
 fun MFXButton(

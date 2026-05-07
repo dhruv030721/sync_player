@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,15 +24,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.meetflix.ui.components.MFXTabBar
-import com.meetflix.ui.screens.HomeScreen
-import com.meetflix.ui.screens.P2PConnectionScreen
-import com.meetflix.ui.theme.meetflixTheme
+import com.meetflix.connections.presentation.screen.ConnectionDiscoveryScreen
+import com.meetflix.core.ui.components.MFXTabBar
+import com.meetflix.home.presentation.screen.HomeScreen
+import com.meetflix.core.ui.theme.meetflixTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        val tabs = listOf<String>("Upload", "Connect")
+        val tabs = listOf<String>("Home", "Nearby", "Upload", "Profile")
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -50,21 +51,26 @@ class MainActivity : ComponentActivity() {
                         MFXTabBar(
                             tabs,
                             selectedTabIndex,
-                            tabHandler = {index -> tabHandler(index)},
-                            modifier = Modifier.windowInsetsPadding(
-                                WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
-                            ).padding(20.dp).background(
-                                color = Color.Transparent
-                            ).clip(
-                                RoundedCornerShape(16.dp)
-                            )
+                            tabHandler = { index -> tabHandler(index) },
+                            modifier = Modifier
+                                .windowInsetsPadding(
+                                    WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+                                )
+                                .padding(20.dp)
+                                .background(
+                                    color = Color.Transparent
+                                )
+                                .clip(
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .border(1.dp, Color(0xFF303030), RoundedCornerShape(16.dp))
                         )
                     }
                 ) { innerPadding ->
                     Crossfade(targetState = selectedTabIndex, label = "") { tab ->
                         when (tab) {
                             0 -> HomeScreen(innerPadding)
-                            1 -> P2PConnectionScreen(innerPadding)
+                            1 -> ConnectionDiscoveryScreen(innerPadding)
                         }
                     }
                 }
