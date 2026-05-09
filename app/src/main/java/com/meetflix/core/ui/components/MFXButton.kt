@@ -58,7 +58,7 @@ fun MFXButton(
             Spacer(modifier = Modifier.width(10.dp))
             Icon(
                 painter = painterResource(id = it),
-                contentDescription = "Button Icon",
+                contentDescription = null,
                 modifier = Modifier.size(iconSize),
                 tint = textColor
             )
