@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,7 +57,7 @@ fun ConnectionDeviceCard(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.wifi_icon),
-                    contentDescription = "Device",
+                    contentDescription = stringResource(R.string.cd_device),
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
@@ -100,7 +101,7 @@ fun ConnectionDeviceCard(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.wifi_icon),
-                    contentDescription = "Connect",
+                    contentDescription = stringResource(R.string.cd_connect),
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )
