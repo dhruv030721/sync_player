@@ -2,6 +2,7 @@ package com.meetflix.connections.presentation.component
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,17 +11,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetflix.R
+import com.meetflix.core.ui.theme.DarkGrayColor
 import com.meetflix.core.ui.theme.Gray_Color
 import com.meetflix.core.ui.theme.PrimaryBtnAlpha
 import com.meetflix.core.ui.theme.PrimaryColor
-
+import com.meetflix.core.ui.theme.blackRedGradient
+import com.meetflix.core.ui.theme.whiteRedGradientBorder
 
 @Composable
 fun ConnectionDeviceCard(
@@ -29,16 +34,17 @@ fun ConnectionDeviceCard(
     isConnected: Boolean,
     onConnect: () -> Unit
 ) {
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(blackRedGradient)
+            .border(
+                width = 1.dp,
+                brush = whiteRedGradientBorder,
+                shape = RoundedCornerShape(16.dp)
+            )
             .clickable { onConnect() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Gray_Color.copy(0.3f)
-        ),
-        border = BorderStroke(1.dp, Gray_Color.copy(0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -89,21 +95,27 @@ fun ConnectionDeviceCard(
             // Connect Indicator
             Box(
                 modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(32.dp))
                     .background(
                         if (isConnected)
-                            Color(0xFF10B981).copy(alpha = 0.4f)  // Green if connected
+                            Color(0xFF10B981).copy(alpha = 0.4f)
                         else
                             PrimaryColor.copy(alpha = PrimaryBtnAlpha)
-                    ),
+                    )
+                    .border(1.dp, Color.White.copy(0.5f), RoundedCornerShape(32.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.wifi_icon),
-                    contentDescription = stringResource(R.string.cd_connect),
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
+                Text(
+                    if (isConnected) {
+                        stringResource(R.string.connected)
+                    } else {
+                        stringResource(R.string.connect)
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    textAlign = TextAlign.Center
                 )
             }
         }
