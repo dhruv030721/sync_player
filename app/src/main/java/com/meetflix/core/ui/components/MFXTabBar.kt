@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,12 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetflix.core.ui.theme.DarkGrayColor
 import com.meetflix.core.ui.theme.Geist_Font
 import com.meetflix.core.ui.theme.PrimaryColor
+import com.meetflix.core.ui.theme.blackWhiteGradient
 
 data class MFXTabItem(
     @StringRes val titleRes: Int,
@@ -81,7 +83,7 @@ fun MFXTabBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp),
+                .height(72.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -99,13 +101,7 @@ fun MFXTabBar(
                             if (selected) {
                                 Modifier
                                     .background(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = 0.2f),
-                                                Color.Black.copy(alpha = 0.1f),
-                                                Color.Black.copy(alpha = 0.3f)
-                                            )
-                                        ),
+                                        brush = blackWhiteGradient,
                                         shape = selectedShape
                                     )
                                     .border(
@@ -122,9 +118,9 @@ fun MFXTabBar(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        modifier = Modifier.padding(3.dp),
+                        modifier = Modifier.padding(horizontal = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
                             painter = painterResource(id = tab.iconRes),
@@ -132,14 +128,18 @@ fun MFXTabBar(
                             tint = contentColor,
                             modifier = Modifier.size(24.dp)
                         )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         Text(
                             text = stringResource(id = tab.titleRes),
                             fontSize = 11.sp,
+                            lineHeight = 11.sp,
                             fontFamily = Geist_Font,
                             color = contentColor,
                             fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            textAlign = TextAlign.Center,
+                            maxLines = 2
                         )
                     }
                 }

@@ -18,4 +18,7 @@
     <string name="cd_upload_icon">Upload icon</string>
     <string name="cd_device">Device</string>
     <string name="cd_connect">Connect</string>
+    <string name="search_connection">Search for Devices</string>
+    <string name="connect">Connect</string>
+    <string name="connected">Connected</string>
 </resources>

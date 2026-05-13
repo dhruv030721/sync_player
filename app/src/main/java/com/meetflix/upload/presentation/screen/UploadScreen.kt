@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -39,13 +40,13 @@ import com.meetflix.R
 import com.meetflix.core.ui.components.MFXButton
 import com.meetflix.core.ui.theme.DarkGrayColor
 import com.meetflix.core.ui.theme.Geist_Font
-import com.meetflix.core.ui.theme.PrimaryBtnAlpha
 import com.meetflix.core.ui.theme.PrimaryColor
-import com.meetflix.core.ui.theme.Zinc700Color
+import com.meetflix.core.ui.theme.blackRedGradient
 
 @Composable
 fun UploadScreen(innerPadding: PaddingValues) {
     val context = LocalContext.current
+    val boxShape = RoundedCornerShape(16.dp)
     var pickedFileName by remember { mutableStateOf<String?>(null) }
 
     val pickFileLauncher = rememberLauncherForActivityResult(
@@ -92,9 +93,26 @@ fun UploadScreen(innerPadding: PaddingValues) {
         Spacer(modifier = Modifier.height(16.dp))
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .border(0.1.dp, Zinc700Color, RoundedCornerShape(16.dp))
-                .background(DarkGrayColor.copy(0.5f))
+                .clip(boxShape)
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.35f),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
+                    shape = boxShape
+                )
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.16f),
+                            DarkGrayColor.copy(alpha = 0.78f),
+                            Color.Black.copy(alpha = 0.42f)
+                        )
+                    )
+                )
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -117,11 +135,19 @@ fun UploadScreen(innerPadding: PaddingValues) {
                     )
                     MFXButton(
                         text = stringResource(R.string.make_it_sharable),
-                        modifier = Modifier.fillMaxWidth(),
-                        bgColor = PrimaryColor,
-                        bgAlpha = PrimaryBtnAlpha,
-                        borderColor = PrimaryColor,
-                        borderSize = 0.5.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(blackRedGradient)
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.35f),
+                                        Color.Red.copy(alpha = 0.08f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(16.dp)
+                            ),
                         textColor = Color.White,
                         icon = R.drawable.share,
                         onClick = {
@@ -154,11 +180,20 @@ fun UploadScreen(innerPadding: PaddingValues) {
                 Spacer(modifier = Modifier.height(20.dp))
                 MFXButton(
                     text = stringResource(R.string.browse_files),
-                    modifier = Modifier.fillMaxWidth(),
-                    bgColor = PrimaryColor,
-                    bgAlpha = PrimaryBtnAlpha,
-                    borderColor = PrimaryColor,
-                    borderSize = 0.5.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(blackRedGradient)
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.Red.copy(alpha = 0.08f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ),
                     textColor = Color.White,
                     onClick = {
                         pickFileLauncher.launch("video/mp4")

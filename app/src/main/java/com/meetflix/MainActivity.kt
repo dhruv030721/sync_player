@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
                         when (tab) {
                             0 -> HomeScreen(innerPadding)
                             1 -> PartyModeScreen(innerPadding)
-                            2 -> ConnectionDiscoveryScreen(innerPadding)
+                            2 -> ConnectionDiscoveryScreen(innerPadding = innerPadding)
                             3 -> UploadScreen(innerPadding)
                             4 -> ProfileScreen(innerPadding)
                         }
