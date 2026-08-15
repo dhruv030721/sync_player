@@ -125,7 +125,8 @@ class NearbyConnectionsManager(private val context: Context) {
             it.copy(
                 isDiscovering = false,
                 activeRole = nextRole,
-                statusMessage = if (it.isAdvertising) "Advertising..." else "Discovery stopped"
+                statusMessage = if (it.isAdvertising) "Advertising..." else "Discovery stopped",
+                discoveredHosts = emptyList()
             )
         }
     }
