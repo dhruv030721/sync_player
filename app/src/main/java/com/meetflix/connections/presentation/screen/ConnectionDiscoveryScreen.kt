@@ -5,14 +5,12 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,7 +38,6 @@ import com.meetflix.connections.presentation.viewmodel.ConnectionDiscoveryViewMo
 import com.meetflix.connections.presentation.widgets.NearbyConnectionsControlWidget
 import com.meetflix.connections.presentation.widgets.NearbyConnectionsEmptyWidget
 import com.meetflix.connections.presentation.widgets.NearbyConnectionsHeaderWidget
-import com.meetflix.connections.presentation.widgets.NearbyConnectionsPayloadWidget
 import com.meetflix.connections.presentation.widgets.NearbyConnectionsPermissionView
 import com.meetflix.connections.presentation.widgets.NearbyConnectionsSearchingWidget
 import com.meetflix.core.ui.theme.Geist_Font
@@ -133,22 +130,6 @@ fun ConnectionDiscoveryScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Widget 3: Active Payload Transfer Channel (when connected)
-        AnimatedVisibility(visible = uiState.connectedHosts.isNotEmpty()) {
-            Column {
-                NearbyConnectionsPayloadWidget(
-                    lastReceivedPayload = uiState.lastReceivedPayload,
-                    onSendPayload = { message ->
-                        val activeEndpoint = uiState.connectedHosts.firstOrNull()?.endpointId
-                        if (activeEndpoint != null) {
-                            viewModel.sendPayload(activeEndpoint, message)
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
 
         // Main Connection Lists Area
         Box(
