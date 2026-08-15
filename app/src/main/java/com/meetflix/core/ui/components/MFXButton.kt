@@ -27,8 +27,8 @@ import com.meetflix.core.ui.theme.Geist_Font
 
 @Composable
 fun MFXButton(
+    modifier: Modifier = Modifier,
     text: String,
-    modifier: Modifier,
     icon: Int? = null,
     iconSize: Dp = 20.dp,
     height: Dp = 50.dp,
