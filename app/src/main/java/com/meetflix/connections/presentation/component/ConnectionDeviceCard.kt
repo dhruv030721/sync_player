@@ -1,6 +1,5 @@
 package com.meetflix.connections.presentation.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -20,8 +18,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetflix.R
-import com.meetflix.core.ui.theme.DarkGrayColor
-import com.meetflix.core.ui.theme.Gray_Color
+import com.meetflix.connections.domain.models.AvailableHost
+import com.meetflix.connections.domain.models.HostConnectionStatus
+import com.meetflix.core.ui.theme.Geist_Font
 import com.meetflix.core.ui.theme.PrimaryBtnAlpha
 import com.meetflix.core.ui.theme.PrimaryColor
 import com.meetflix.core.ui.theme.blackRedGradient
@@ -29,13 +28,15 @@ import com.meetflix.core.ui.theme.whiteRedGradientBorder
 
 @Composable
 fun ConnectionDeviceCard(
-    deviceName: String,
-    deviceAddress: String,
-    isConnected: Boolean,
-    onConnect: () -> Unit
+    host: AvailableHost,
+    onActionClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val isConnected = host.status == HostConnectionStatus.CONNECTED
+    val isConnecting = host.status == HostConnectionStatus.CONNECTING
+
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(blackRedGradient)
@@ -44,79 +45,104 @@ fun ConnectionDeviceCard(
                 brush = whiteRedGradientBorder,
                 shape = RoundedCornerShape(16.dp)
             )
-            .clickable { onConnect() },
+            .clickable(enabled = !isConnecting) { onActionClick() }
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            // Device Icon
+            // Device Icon Container
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(PrimaryColor.copy(alpha = 0.2f)),
+                    .background(
+                        if (isConnected) Color(0xFF10B981).copy(alpha = 0.2f)
+                        else PrimaryColor.copy(alpha = 0.2f)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.wifi_icon),
                     contentDescription = stringResource(R.string.cd_device),
-                    tint = Color.White,
+                    tint = if (isConnected) Color(0xFF10B981) else Color.White,
                     modifier = Modifier.size(24.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Device Info
+            // Device Information
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = deviceName,
+                    text = host.endpointName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
+                    fontFamily = Geist_Font,
                     color = Color.White
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = deviceAddress,
+                    text = "Endpoint ID: ${host.endpointId}",
                     fontSize = 12.sp,
+                    fontFamily = Geist_Font,
                     color = Color.White.copy(alpha = 0.5f),
                     fontWeight = FontWeight.Normal
                 )
             }
 
-            // Connect Indicator
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Action / Status Badge
+            val badgeBgColor = when (host.status) {
+                HostConnectionStatus.CONNECTED -> Color(0xFF10B981).copy(alpha = 0.4f)
+                HostConnectionStatus.CONNECTING -> Color(0xFFF59E0B).copy(alpha = 0.4f)
+                HostConnectionStatus.REJECTED -> Color(0xFFEF4444).copy(alpha = 0.4f)
+                else -> PrimaryColor.copy(alpha = PrimaryBtnAlpha)
+            }
+
+            val badgeText = when (host.status) {
+                HostConnectionStatus.CONNECTED -> stringResource(R.string.connected)
+                HostConnectionStatus.CONNECTING -> "Connecting..."
+                HostConnectionStatus.REJECTED -> "Rejected"
+                HostConnectionStatus.DISCONNECTED -> stringResource(R.string.connect)
+                HostConnectionStatus.DISCOVERED -> stringResource(R.string.connect)
+            }
+
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(32.dp))
-                    .background(
-                        if (isConnected)
-                            Color(0xFF10B981).copy(alpha = 0.4f)
-                        else
-                            PrimaryColor.copy(alpha = PrimaryBtnAlpha)
-                    )
-                    .border(1.dp, Color.White.copy(0.5f), RoundedCornerShape(32.dp)),
+                    .background(badgeBgColor)
+                    .border(1.dp, Color.White.copy(0.3f), RoundedCornerShape(32.dp))
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    if (isConnected) {
-                        stringResource(R.string.connected)
-                    } else {
-                        stringResource(R.string.connect)
-                    },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (isConnecting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            color = Color.White,
+                            strokeWidth = 1.5.dp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = badgeText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = Geist_Font,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
