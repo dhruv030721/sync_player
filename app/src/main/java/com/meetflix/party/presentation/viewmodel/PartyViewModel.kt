@@ -5,32 +5,32 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.meetflix.connections.data.NearbyConnectionsManager
+import com.meetflix.connections.data.NearbyRepository
 import com.meetflix.connections.domain.models.AvailableHost
 import com.meetflix.party.domain.models.PartyModeState
 import com.meetflix.party.domain.models.PartyScreenMode
 import com.meetflix.player.data.ExoPlayerManager
 import com.meetflix.player.data.PlayerSyncManager
-import com.meetflix.player.domain.enums.PlayerSyncActionType
 import com.meetflix.player.domain.models.PlaybackAction
 import com.meetflix.player.presentation.viewmodel.PlayerViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
 /**
  * Design Pattern: Observer / ViewModel (MVI State Machine)
- * Central ViewModel managing Party Mode lifecycle, host/guest discovery, P2P video streaming,
- * and synchronized ExoPlayer playback state.
+ * Central ViewModel consuming application-wide NearbyRepository singletons to manage Party Mode lifecycle,
+ * host/guest discovery, P2P video streaming, and synchronized ExoPlayer playback state.
  */
 class PartyViewModel(application: Application) : AndroidViewModel(application) {
 
-    val nearbyConnectionsManager = NearbyConnectionsManager(application)
-    val exoPlayerManager = ExoPlayerManager(application)
-    val playerSyncManager = PlayerSyncManager(exoPlayerManager, nearbyConnectionsManager)
+    private val repository = NearbyRepository.getInstance(application)
+    val nearbyConnectionsManager: NearbyConnectionsManager = repository.nearbyConnectionsManager
+    val exoPlayerManager: ExoPlayerManager = repository.exoPlayerManager
+    val playerSyncManager: PlayerSyncManager = repository.playerSyncManager
     val playerViewModel = PlayerViewModel(exoPlayerManager, playerSyncManager)
 
     private val _uiState = MutableStateFlow(PartyModeState())
@@ -112,11 +112,5 @@ class PartyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onPlaybackAction(action: PlaybackAction) {
         playerViewModel.onAction(action)
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        nearbyConnectionsManager.stopAll()
-        exoPlayerManager.release()
     }
 }

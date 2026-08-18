@@ -1,8 +1,13 @@
 package com.meetflix.party.presentation.screen
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,161 +25,147 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.meetflix.R
 import com.meetflix.connections.presentation.component.ConnectionDeviceCard
-import com.meetflix.connections.presentation.widgets.NearbyConnectionsHeaderWidget
 import com.meetflix.core.ui.components.MFXButton
 import com.meetflix.core.ui.theme.Geist_Font
+import com.meetflix.party.domain.models.PartyScreenMode
+import com.meetflix.party.presentation.activity.PartyRoomActivity
 import com.meetflix.party.presentation.component.PartyActionCard
-import com.meetflix.party.presentation.component.PayloadTransferProgressWidget
 import com.meetflix.party.presentation.viewmodel.PartyViewModel
-import com.meetflix.player.presentation.screen.PlayerScreen
 
 /**
  * Design Pattern: Clean Architecture Presentation Screen
- * Dedicated Join Party screen allowing users to discover nearby party hosts, join party rooms,
- * receive P2P video streams, and enjoy synchronized playback.
+ * Modern Join Party tab screen for discovering nearby party hosts, handling runtime permissions,
+ * and launching PartyRoomActivity.
  */
 @Composable
 fun JoinPartyScreen(
     innerPadding: PaddingValues,
     viewModel: PartyViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
-    val playerState by viewModel.playerViewModel.uiState.collectAsState()
+
+    val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.NEARBY_WIFI_DEVICES
+        )
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.BLUETOOTH_CONNECT
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        viewModel.updatePermissionsState(allGranted)
+        if (allGranted) {
+            viewModel.startDiscovery()
+        }
+    }
+
+    fun startDiscoveryWithPermissionCheck() {
+        val hasAllPermissions = requiredPermissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (hasAllPermissions) {
+            viewModel.startDiscovery()
+        } else {
+            permissionLauncher.launch(requiredPermissions)
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
             .background(Color.Black)
+            .padding(20.dp)
     ) {
-        // 1. VIDEO PLAYER / HEADER AREA
-        if (state.selectedMediaUri != null || playerState.mediaUri != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .background(Color.Black),
-                contentAlignment = Alignment.Center
-            ) {
-                PlayerScreen(
-                    viewModel = viewModel.playerViewModel,
-                    onBackClick = { viewModel.leaveParty() }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Nearby Watch Parties",
+                    fontFamily = Geist_Font,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${state.discoveredParties.size} host(s) found",
+                    fontFamily = Geist_Font,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.5f)
                 )
             }
-        } else {
-            NearbyConnectionsHeaderWidget(
-                localDeviceName = state.localDeviceName,
-                isConnected = state.connectedMembers.isNotEmpty(),
-                isActiveRole = state.mode != com.meetflix.party.domain.models.PartyScreenMode.IDLE,
-                statusMessage = state.statusMessage,
-                modifier = Modifier.padding(16.dp)
+
+            MFXButton(
+                text = if (state.mode == PartyScreenMode.DISCOVERING) "Stop Scan" else "Scan Parties",
+                onClick = {
+                    if (state.mode == PartyScreenMode.DISCOVERING) {
+                        viewModel.stopDiscovery()
+                    } else {
+                        startDiscoveryWithPermissionCheck()
+                    }
+                }
             )
         }
 
-        // 2. TRANSFER PROGRESS BANNER
-        PayloadTransferProgressWidget(
-            isVisible = state.isTransferring,
-            progress = state.transferProgress,
-            statusMessage = state.transferStatusMessage,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-        )
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. JOIN WORKFLOW CONTENT
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(16.dp)
-        ) {
-            if (state.selectedMediaUri == null && playerState.mediaUri == null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "NEARBY PARTY HOSTS (${state.discoveredParties.size})",
-                        fontFamily = Geist_Font,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = Color(0xFF10B981)
-                    )
-
-                    MFXButton(
-                        text = if (state.mode == com.meetflix.party.domain.models.PartyScreenMode.DISCOVERING) "Stop Search" else "Search Parties",
-                        onClick = {
-                            if (state.mode == com.meetflix.party.domain.models.PartyScreenMode.DISCOVERING) {
-                                viewModel.stopDiscovery()
-                            } else {
-                                viewModel.startDiscovery()
-                            }
+        if (state.mode != PartyScreenMode.DISCOVERING && state.discoveredParties.isEmpty()) {
+            PartyActionCard(
+                title = "Search Nearby Parties",
+                subtitle = "Scan for active party hosts in your immediate vicinity.",
+                iconRes = R.drawable.wifi_icon,
+                accentColor = Color(0xFF10B981),
+                onClick = { startDiscoveryWithPermissionCheck() }
+            )
+        } else if (state.discoveredParties.isEmpty()) {
+            Text(
+                text = "Scanning for nearby hosts... Ensure the host has selected a video on 'Host Party'.",
+                fontFamily = Geist_Font,
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 13.sp,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(state.discoveredParties, key = { it.endpointId }) { host ->
+                    ConnectionDeviceCard(
+                        host = host,
+                        onActionClick = {
+                            PartyRoomActivity.launchAsGuest(context, host)
                         }
                     )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                if (state.mode != com.meetflix.party.domain.models.PartyScreenMode.DISCOVERING && state.discoveredParties.isEmpty()) {
-                    PartyActionCard(
-                        title = "🔍 Search Nearby Parties",
-                        subtitle = "Scan for nearby party hosts who have launched a watch room.",
-                        iconRes = R.drawable.wifi_icon,
-                        accentColor = Color(0xFF10B981),
-                        onClick = { viewModel.startDiscovery() }
-                    )
-                } else if (state.discoveredParties.isEmpty()) {
-                    Text(
-                        text = "Searching for nearby parties... Make sure the host has selected a video on 'Host Party'.",
-                        fontFamily = Geist_Font,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(state.discoveredParties, key = { it.endpointId }) { host ->
-                            ConnectionDeviceCard(
-                                host = host,
-                                onActionClick = { viewModel.joinParty(host) }
-                            )
-                        }
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "CONNECTED TO PARTY",
-                        fontFamily = Geist_Font,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = Color(0xFF10B981)
-                    )
-
-                    MFXButton(
-                        text = "Leave Party",
-                        onClick = { viewModel.leaveParty() }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.connectedMembers, key = { it.endpointId }) { host ->
-                        ConnectionDeviceCard(
-                            host = host,
-                            onActionClick = { viewModel.nearbyConnectionsManager.disconnectEndpoint(host.endpointId) }
-                        )
-                    }
                 }
             }
         }

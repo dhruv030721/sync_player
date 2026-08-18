@@ -27,12 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetflix.core.ui.theme.Geist_Font
 import com.meetflix.core.ui.theme.PrimaryColor
-import com.meetflix.core.ui.theme.blackRedGradient
-import com.meetflix.core.ui.theme.whiteRedGradientBorder
 
 /**
  * Design Pattern: Strategy / Stateless Composable Component
- * Reusable action card for launching or searching party watch rooms.
+ * Modern, minimalist action card for party room operations.
  */
 @Composable
 fun PartyActionCard(
@@ -43,58 +41,54 @@ fun PartyActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(blackRedGradient)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF141419))
             .border(
                 width = 1.dp,
-                brush = whiteRedGradientBorder,
-                shape = RoundedCornerShape(18.dp)
+                color = Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable { onClick() }
-            .padding(20.dp)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accentColor.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(accentColor.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = title,
-                    tint = accentColor,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = title,
+                tint = accentColor,
+                modifier = Modifier.size(22.dp)
+            )
+        }
 
-            Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontFamily = Geist_Font,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    color = Color.White
-                )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontFamily = Geist_Font,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = Color.White
+            )
 
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
-                Text(
-                    text = subtitle,
-                    fontFamily = Geist_Font,
-                    fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.7f)
-                )
-            }
+            Text(
+                text = subtitle,
+                fontFamily = Geist_Font,
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.5f)
+            )
         }
     }
 }
