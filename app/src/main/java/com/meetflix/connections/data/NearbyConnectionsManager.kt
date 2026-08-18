@@ -1,12 +1,15 @@
 package com.meetflix.connections.data
 
 import android.content.Context
+import android.net.Uri
 import android.os.Build
+import android.os.ParcelFileDescriptor
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback
 import com.google.android.gms.nearby.connection.ConnectionResolution
+import com.google.android.gms.nearby.connection.ConnectionsStatusCodes
 import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo
 import com.google.android.gms.nearby.connection.DiscoveryOptions
 import com.google.android.gms.nearby.connection.EndpointDiscoveryCallback
@@ -14,7 +17,6 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
-import com.google.android.gms.nearby.connection.ConnectionsStatusCodes
 import com.meetflix.connections.domain.models.AvailableHost
 import com.meetflix.connections.domain.models.ConnectionRole
 import com.meetflix.connections.domain.models.HostConnectionStatus
@@ -23,8 +25,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.io.File
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Design Pattern: Manager / Native Wrapper
+ * Encapsulates Google Nearby Connections P2P API for device discovery, connection management,
+ * byte control action synchronization, and P2P video file payload transfers.
+ */
 class NearbyConnectionsManager(private val context: Context) {
 
     companion object {
@@ -35,6 +44,8 @@ class NearbyConnectionsManager(private val context: Context) {
     private val connectionsClient = Nearby.getConnectionsClient(context)
     private val _uiState = MutableStateFlow(NearbyConnectionState(localEndpointName = getDeviceName()))
     val uiState: StateFlow<NearbyConnectionState> = _uiState.asStateFlow()
+
+    private val incomingFilePayloads = ConcurrentHashMap<Long, File>()
 
     private fun getDeviceName(): String {
         return "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
@@ -65,7 +76,7 @@ class NearbyConnectionsManager(private val context: Context) {
                 it.copy(
                     isAdvertising = true,
                     activeRole = ConnectionRole.ADVERTISING,
-                    statusMessage = "Advertising as '$name'..."
+                    statusMessage = "Advertising party as '$name'..."
                 )
             }
         }.addOnFailureListener { e ->
@@ -86,7 +97,7 @@ class NearbyConnectionsManager(private val context: Context) {
             it.copy(
                 isAdvertising = false,
                 activeRole = nextRole,
-                statusMessage = if (it.isDiscovering) "Searching for nearby devices..." else "Advertising stopped"
+                statusMessage = if (it.isDiscovering) "Searching for nearby parties..." else "Advertising stopped"
             )
         }
     }
@@ -104,7 +115,7 @@ class NearbyConnectionsManager(private val context: Context) {
                 it.copy(
                     isDiscovering = true,
                     activeRole = ConnectionRole.DISCOVERING,
-                    statusMessage = "Searching for nearby devices..."
+                    statusMessage = "Searching for nearby parties..."
                 )
             }
         }.addOnFailureListener { e ->
@@ -135,7 +146,6 @@ class NearbyConnectionsManager(private val context: Context) {
     fun connectToEndpoint(host: AvailableHost) {
         val name = _uiState.value.localEndpointName
 
-        // Update host status to CONNECTING
         updateHostStatus(host.endpointId, HostConnectionStatus.CONNECTING)
 
         connectionsClient.requestConnection(
@@ -162,7 +172,31 @@ class NearbyConnectionsManager(private val context: Context) {
         connectionsClient.sendPayload(endpointId, payload)
     }
 
-    // 8. Stop All Operations
+    // 8. Send Video File Payload (P2P Transfer)
+    fun sendVideoFilePayload(endpointId: String, uri: Uri): Long? {
+        return try {
+            val pfd: ParcelFileDescriptor? = context.contentResolver.openFileDescriptor(uri, "r")
+            if (pfd != null) {
+                val payload = Payload.fromFile(pfd)
+                val payloadId = payload.id
+                connectionsClient.sendPayload(endpointId, payload)
+                _uiState.update {
+                    it.copy(
+                        isTransferring = true,
+                        transferProgress = 0f,
+                        transferStatusMessage = "Initiating P2P video transfer..."
+                    )
+                }
+                payloadId
+            } else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _uiState.update { it.copy(statusMessage = "Failed to open video file: ${e.localizedMessage}") }
+            null
+        }
+    }
+
+    // 9. Stop All Operations
     fun stopAll() {
         connectionsClient.stopAdvertising()
         connectionsClient.stopDiscovery()
@@ -201,7 +235,6 @@ class NearbyConnectionsManager(private val context: Context) {
 
     private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
-            // Automatically accept connection for RFC-01 flow
             connectionsClient.acceptConnection(endpointId, payloadCallback)
             updateHostStatus(endpointId, HostConnectionStatus.CONNECTING, info.endpointName)
         }
@@ -238,17 +271,69 @@ class NearbyConnectionsManager(private val context: Context) {
 
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
-            if (payload.type == Payload.Type.BYTES) {
-                val bytes = payload.asBytes()
-                if (bytes != null) {
-                    val message = String(bytes, StandardCharsets.UTF_8)
-                    _uiState.update { it.copy(lastReceivedPayload = message) }
+            when (payload.type) {
+                Payload.Type.BYTES -> {
+                    val bytes = payload.asBytes()
+                    if (bytes != null) {
+                        val message = String(bytes, StandardCharsets.UTF_8)
+                        _uiState.update { it.copy(lastReceivedPayload = message) }
+                    }
                 }
+                Payload.Type.FILE -> {
+                    @Suppress("DEPRECATION")
+                    val file = payload.asFile()?.asJavaFile()
+                    if (file != null) {
+                        incomingFilePayloads[payload.id] = file
+                        _uiState.update {
+                            it.copy(
+                                isTransferring = true,
+                                transferProgress = 0f,
+                                transferStatusMessage = "Receiving party video P2P..."
+                            )
+                        }
+                    }
+                }
+                else -> {}
             }
         }
 
         override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
-            // Transfer status tracking for RFC-01
+            val totalBytes = update.totalBytes
+            val bytesTransferred = update.bytesTransferred
+            val progress = if (totalBytes > 0) bytesTransferred.toFloat() / totalBytes.toFloat() else 0f
+
+            when (update.status) {
+                PayloadTransferUpdate.Status.IN_PROGRESS -> {
+                    _uiState.update {
+                        it.copy(
+                            isTransferring = true,
+                            transferProgress = progress,
+                            transferStatusMessage = "Transferring video: ${(progress * 100).toInt()}%"
+                        )
+                    }
+                }
+                PayloadTransferUpdate.Status.SUCCESS -> {
+                    val receivedFile = incomingFilePayloads[update.payloadId]
+                    val receivedUri = receivedFile?.let { Uri.fromFile(it).toString() }
+
+                    _uiState.update {
+                        it.copy(
+                            isTransferring = false,
+                            transferProgress = 1.0f,
+                            transferStatusMessage = "P2P video transfer completed!",
+                            receivedVideoUri = receivedUri ?: it.receivedVideoUri
+                        )
+                    }
+                }
+                PayloadTransferUpdate.Status.FAILURE -> {
+                    _uiState.update {
+                        it.copy(
+                            isTransferring = false,
+                            transferStatusMessage = "P2P video transfer failed."
+                        )
+                    }
+                }
+            }
         }
     }
 

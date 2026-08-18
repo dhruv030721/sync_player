@@ -1,5 +1,6 @@
 package com.meetflix.player.data
 
+import android.net.Uri
 import com.meetflix.connections.data.NearbyConnectionsManager
 import com.meetflix.player.domain.enums.PlayerSyncActionType
 import com.meetflix.player.domain.models.PlayerSyncPayload
@@ -12,8 +13,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * Design Pattern: Strategy & Observer
- * Encapsulates Party Mode synchronization logic over Nearby Connections.
- * Computes network latency drift and triggers aligned playback commands on ExoPlayerManager.
+ * Encapsulates Party Mode playback synchronization logic over Nearby Connections.
+ * Initiates P2P video file payload transfers, computes network latency drift, and triggers aligned ExoPlayer commands.
  */
 class PlayerSyncManager(
     private val exoPlayerManager: ExoPlayerManager,
@@ -21,13 +22,22 @@ class PlayerSyncManager(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = CoroutineScope(Dispatchers.Main)
+    private var lastReceivedVideoUri: String? = null
 
     init {
-        // Observe incoming payloads from NearbyConnectionsManager
+        // Observe incoming string JSON payloads from NearbyConnectionsManager
         nearbyConnectionsManager.uiState
             .onEach { state ->
                 state.lastReceivedPayload?.let { payloadString ->
                     handleIncomingPayload(payloadString)
+                }
+
+                // Observe completed P2P video payload transfers on guest device
+                state.receivedVideoUri?.let { receivedUri ->
+                    if (receivedUri != lastReceivedVideoUri) {
+                        lastReceivedVideoUri = receivedUri
+                        exoPlayerManager.setMediaUri(receivedUri, "Party Video")
+                    }
                 }
             }
             .launchIn(scope)
@@ -37,18 +47,28 @@ class PlayerSyncManager(
         actionType: PlayerSyncActionType,
         positionMs: Long,
         mediaUri: String? = null,
+        videoTitle: String? = null,
         playbackSpeed: Float = 1.0f
     ) {
+        // If host sets media, trigger P2P file transfer to all connected endpoints
+        if (actionType == PlayerSyncActionType.SET_MEDIA && mediaUri != null) {
+            val parsedUri = Uri.parse(mediaUri)
+            nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
+                nearbyConnectionsManager.sendVideoFilePayload(host.endpointId, parsedUri)
+            }
+        }
+
         val payload = PlayerSyncPayload(
             actionType = actionType,
             positionMs = positionMs,
             playbackSpeed = playbackSpeed,
             mediaUri = mediaUri,
+            videoTitle = videoTitle,
             timestampMs = System.currentTimeMillis()
         )
         val payloadString = json.encodeToString(payload)
 
-        // Broadcast to all connected host/guest endpoints
+        // Broadcast sync JSON payload to all connected host/guest endpoints
         nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
             nearbyConnectionsManager.sendPayload(host.endpointId, payloadString)
         }
@@ -77,8 +97,9 @@ class PlayerSyncManager(
                     exoPlayerManager.seekTo(payload.positionMs)
                 }
                 PlayerSyncActionType.SET_MEDIA -> {
-                    payload.mediaUri?.let { uri ->
-                        exoPlayerManager.setMediaUri(uri)
+                    // Set video title metadata
+                    payload.videoTitle?.let { title ->
+                        // Title updated on guest UI
                     }
                 }
                 PlayerSyncActionType.HEARTBEAT -> {

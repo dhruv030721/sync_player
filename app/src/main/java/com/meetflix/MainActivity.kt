@@ -1,5 +1,6 @@
 package com.meetflix
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,27 +22,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.meetflix.connections.presentation.screen.ConnectionDiscoveryScreen
 import com.meetflix.core.ui.components.MFXHeader
 import com.meetflix.core.ui.components.MFXTabBar
 import com.meetflix.core.ui.components.MFXTabItem
-import com.meetflix.home.presentation.screen.HomeScreen
 import com.meetflix.core.ui.theme.meetflixTheme
-import com.meetflix.party.presentation.screen.PartyModeScreen
+import com.meetflix.home.presentation.screen.HomeScreen
+import com.meetflix.party.presentation.screen.HostPartyScreen
+import com.meetflix.party.presentation.screen.JoinPartyScreen
 import com.meetflix.profile.presentation.screen.ProfileScreen
-import com.meetflix.upload.presentation.screen.UploadScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         enableEdgeToEdge()
         setContent {
             meetflixTheme {
                 val tabs = listOf(
                     MFXTabItem(R.string.tab_home, R.drawable.ic_tab_home),
-                    MFXTabItem(R.string.tab_party_mode, R.drawable.ic_tab_party),
-                    MFXTabItem(R.string.tab_nearby, R.drawable.ic_tab_nearby),
-                    MFXTabItem(R.string.tab_upload, R.drawable.ic_tab_upload)
+                    MFXTabItem(R.string.tab_host_party, R.drawable.ic_tab_party),
+                    MFXTabItem(R.string.tab_search_party, R.drawable.wifi_icon)
                 )
                 var selectedTabIndex by remember { mutableIntStateOf(0) }
 
@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     containerColor = Color.Black,
                     topBar = {
                         MFXHeader(
-                            onProfileClick = { tabHandler(4) }
+                            onProfileClick = { tabHandler(3) }
                         )
                     },
                     bottomBar = {
@@ -76,10 +76,9 @@ class MainActivity : ComponentActivity() {
                     ) { tab ->
                         when (tab) {
                             0 -> HomeScreen(innerPadding)
-                            1 -> PartyModeScreen(innerPadding)
-                            2 -> ConnectionDiscoveryScreen(innerPadding = innerPadding)
-                            3 -> UploadScreen(innerPadding)
-                            4 -> ProfileScreen(innerPadding)
+                            1 -> HostPartyScreen(innerPadding)
+                            2 -> JoinPartyScreen(innerPadding)
+                            3 -> ProfileScreen(innerPadding)
                         }
                     }
                 }
