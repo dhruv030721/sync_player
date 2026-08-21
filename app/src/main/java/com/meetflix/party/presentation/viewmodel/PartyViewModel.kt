@@ -41,8 +41,9 @@ class PartyViewModel(application: Application) : AndroidViewModel(application) {
         nearbyConnectionsManager.uiState
             .onEach { nearbyState ->
                 _uiState.update { current ->
+                    val activeUri = nearbyState.receivedVideoUri ?: current.selectedMediaUri ?: exoPlayerManager.playerState.value.mediaUri
                     val nextMode = when {
-                        nearbyState.receivedVideoUri != null || exoPlayerManager.playerState.value.mediaUri != null -> PartyScreenMode.WATCHING
+                        activeUri != null -> PartyScreenMode.WATCHING
                         nearbyState.isAdvertising -> PartyScreenMode.HOSTING
                         nearbyState.isDiscovering -> PartyScreenMode.DISCOVERING
                         else -> PartyScreenMode.IDLE
@@ -50,6 +51,7 @@ class PartyViewModel(application: Application) : AndroidViewModel(application) {
 
                     current.copy(
                         mode = nextMode,
+                        selectedMediaUri = activeUri,
                         hasRequiredPermissions = nearbyState.hasRequiredPermissions,
                         localDeviceName = nearbyState.localEndpointName,
                         discoveredParties = nearbyState.discoveredHosts,
@@ -79,15 +81,40 @@ class PartyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun launchParty(videoUri: Uri, videoTitle: String = "Watch Party") {
         val title = if (videoTitle.isNotBlank()) videoTitle else "Watch Party"
+        nearbyConnectionsManager.setHostVideoUri(videoUri)
+        val localMediaServer = repository.localMediaServer
+        localMediaServer.setMediaUri(videoUri)
+        val streamUrl = localMediaServer.getStreamUrl()
+
         _uiState.update {
             it.copy(
                 mode = PartyScreenMode.HOSTING,
                 activePartyTitle = title,
-                selectedMediaUri = videoUri.toString()
+                selectedMediaUri = streamUrl
             )
         }
         nearbyConnectionsManager.startAdvertising(customName = "${nearbyConnectionsManager.uiState.value.localEndpointName}'s Party")
-        playerViewModel.onAction(PlaybackAction.LoadMedia(videoUri.toString(), title))
+        playerViewModel.onAction(PlaybackAction.LoadMedia(streamUrl, title))
+
+        nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
+            nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
+            nearbyConnectionsManager.sendVideoStreamPayload(host.endpointId, videoUri)
+        }
+    }
+
+    fun broadcastVideoStream(videoUri: Uri) {
+        nearbyConnectionsManager.setHostVideoUri(videoUri)
+        val localMediaServer = repository.localMediaServer
+        localMediaServer.setMediaUri(videoUri)
+        val streamUrl = localMediaServer.getStreamUrl()
+
+        _uiState.update { it.copy(selectedMediaUri = streamUrl) }
+        playerViewModel.onAction(PlaybackAction.LoadMedia(streamUrl, "Stream Video"))
+
+        nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
+            nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
+            nearbyConnectionsManager.sendVideoStreamPayload(host.endpointId, videoUri)
+        }
     }
 
     fun startDiscovery() {

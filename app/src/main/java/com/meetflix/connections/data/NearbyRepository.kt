@@ -3,14 +3,16 @@ package com.meetflix.connections.data
 import android.content.Context
 import com.meetflix.player.data.ExoPlayerManager
 import com.meetflix.player.data.PlayerSyncManager
+import com.meetflix.stream.data.LocalMediaServer
 
 /**
  * Design Pattern: Singleton / Repository
  * Centralized repository providing shared application-wide singletons for NearbyConnectionsManager,
- * ExoPlayerManager, and PlayerSyncManager to prevent state fragmentation across activities and viewmodels.
+ * ExoPlayerManager, PlayerSyncManager, and LocalMediaServer to prevent state fragmentation.
  */
 class NearbyRepository private constructor(context: Context) {
 
+    val localMediaServer = LocalMediaServer(context.applicationContext).apply { start() }
     val nearbyConnectionsManager = NearbyConnectionsManager(context.applicationContext)
     val exoPlayerManager = ExoPlayerManager(context.applicationContext)
     val playerSyncManager = PlayerSyncManager(exoPlayerManager, nearbyConnectionsManager)

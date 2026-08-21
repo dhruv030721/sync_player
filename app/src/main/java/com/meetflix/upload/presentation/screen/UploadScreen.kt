@@ -43,16 +43,20 @@ import com.meetflix.core.ui.theme.Geist_Font
 import com.meetflix.core.ui.theme.PrimaryColor
 import com.meetflix.core.ui.theme.blackRedGradient
 
+import com.meetflix.party.presentation.activity.PartyRoomActivity
+
 @Composable
 fun UploadScreen(innerPadding: PaddingValues) {
     val context = LocalContext.current
     val boxShape = RoundedCornerShape(16.dp)
     var pickedFileName by remember { mutableStateOf<String?>(null) }
+    var pickedFileUri by remember { mutableStateOf<Uri?>(null) }
 
     val pickFileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
+            pickedFileUri = it
             val cursor = context.contentResolver.query(it, null, null, null, null)
             cursor?.use { c ->
                 val nameIndex = c.getColumnIndexOpenableColumnsDisplayName()
@@ -151,6 +155,13 @@ fun UploadScreen(innerPadding: PaddingValues) {
                         textColor = Color.White,
                         icon = R.drawable.share,
                         onClick = {
+                            pickedFileUri?.let { uri ->
+                                PartyRoomActivity.launchAsHost(
+                                    context = context,
+                                    videoUri = uri,
+                                    partyTitle = pickedFileName ?: "Shared Stream"
+                                )
+                            }
                         }
                     )
                 }

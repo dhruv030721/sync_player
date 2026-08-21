@@ -18,12 +18,18 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
+import android.util.Log
+
 /**
  * Design Pattern: Manager / Wrapper
  * Encapsulates Media3 ExoPlayer instance, manages player listener lifecycle,
  * position polling coroutines, and exposes reactive StateFlow.
  */
 class ExoPlayerManager(context: Context) {
+
+    companion object {
+        private const val TAG = "MeetflixStream"
+    }
 
     val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
 
@@ -36,6 +42,7 @@ class ExoPlayerManager(context: Context) {
     init {
         exoPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                Log.d(TAG, "ExoPlayer onIsPlayingChanged: $isPlaying")
                 _playerState.update { it.copy(isPlaying = isPlaying) }
                 if (isPlaying) {
                     startPositionPolling()
@@ -44,18 +51,34 @@ class ExoPlayerManager(context: Context) {
                 }
             }
             override fun onPlaybackStateChanged(playbackState: Int) {
+                val stateString = when (playbackState) {
+                    Player.STATE_IDLE -> "IDLE"
+                    Player.STATE_BUFFERING -> "BUFFERING"
+                    Player.STATE_READY -> "READY"
+                    Player.STATE_ENDED -> "ENDED"
+                    else -> "UNKNOWN($playbackState)"
+                }
+                Log.d(TAG, "ExoPlayer onPlaybackStateChanged: $stateString")
                 if (playbackState == Player.STATE_READY) {
                     val duration = if (exoPlayer.duration > 0) exoPlayer.duration else 0L
                     _playerState.update { it.copy(durationMs = duration) }
                 }
             }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                Log.e(TAG, "ExoPlayer onPlayerError: ${error.message}", error)
+            }
         })
     }
 
-    fun setMediaUri(uri: String, title: String = "") {
+    fun setMediaUri(uri: String, title: String = "", autoPlay: Boolean = true) {
+        Log.d(TAG, "ExoPlayerManager setMediaUri: $uri (title='$title', autoPlay=$autoPlay)")
         val mediaItem = MediaItem.fromUri(uri)
         exoPlayer.setMediaItem(mediaItem)
+        exoPlayer.playWhenReady = autoPlay
         exoPlayer.prepare()
+        if (autoPlay) {
+            exoPlayer.play()
+        }
         _playerState.update {
             it.copy(
                 mediaUri = uri,
