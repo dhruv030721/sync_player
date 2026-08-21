@@ -118,6 +118,13 @@ fun MFXPlayerControls(
             }
 
             // --- BOTTOM BAR: SEEKBAR & SPEED SELECTOR ---
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val fullscreenDrawable = if (state.isFullScreen) {
+                painterResource(R.drawable.ic_fullscreen_exit)
+            } else {
+                painterResource(R.drawable.ic_fullscreen)
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -128,8 +135,31 @@ fun MFXPlayerControls(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(
+                        onClick = {
+                            val activity = context as? android.app.Activity
+                            val nextFullScreen = !state.isFullScreen
+                            activity?.requestedOrientation = if (nextFullScreen) {
+                                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            } else {
+                                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                            }
+                            onAction(PlaybackAction.ToggleFullScreen)
+                        }
+                    ) {
+                        Icon(
+                            painter = fullscreenDrawable,
+                            contentDescription = if (state.isFullScreen) "Exit Fullscreen" else "Fullscreen",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Box {
                         Text(
                             text = "${state.playbackSpeed}x",
@@ -163,6 +193,7 @@ fun MFXPlayerControls(
                 MFXSeekBar(
                     currentPositionMs = state.currentPositionMs,
                     durationMs = state.durationMs,
+                    enabled = state.canSeek,
                     onSeek = { position ->
                         onAction(PlaybackAction.Seek(position))
                     }

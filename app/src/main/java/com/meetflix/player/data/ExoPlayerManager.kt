@@ -59,9 +59,13 @@ class ExoPlayerManager(context: Context) {
                     else -> "UNKNOWN($playbackState)"
                 }
                 Log.d(TAG, "ExoPlayer onPlaybackStateChanged: $stateString")
-                if (playbackState == Player.STATE_READY) {
-                    val duration = if (exoPlayer.duration > 0) exoPlayer.duration else 0L
-                    _playerState.update { it.copy(durationMs = duration) }
+                val isBuffering = (playbackState == Player.STATE_BUFFERING)
+                _playerState.update { current ->
+                    val duration = if (exoPlayer.duration > 0) exoPlayer.duration else current.durationMs
+                    current.copy(
+                        isBuffering = isBuffering,
+                        durationMs = duration
+                    )
                 }
             }
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -103,6 +107,22 @@ class ExoPlayerManager(context: Context) {
     fun setPlaybackSpeed(speed: Float) {
         exoPlayer.playbackParameters = PlaybackParameters(speed)
         _playerState.update { it.copy(playbackSpeed = speed) }
+    }
+
+    fun setControlsVisibility(visible: Boolean) {
+        _playerState.update { it.copy(isControlsVisible = visible) }
+    }
+
+    fun setCanSeek(canSeek: Boolean) {
+        _playerState.update { it.copy(canSeek = canSeek) }
+    }
+
+    fun setFullScreen(isFullScreen: Boolean) {
+        _playerState.update { it.copy(isFullScreen = isFullScreen) }
+    }
+
+    fun setIsSyncing(isSyncing: Boolean) {
+        _playerState.update { it.copy(isSyncing = isSyncing) }
     }
 
     private fun startPositionPolling() {
