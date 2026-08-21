@@ -83,7 +83,22 @@ fun PartyRoomScreen(
                 .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            if (state.selectedMediaUri != null || playerState.mediaUri != null) {
+            if (state.isPreparingMedia) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = Color(0xFF10B981),
+                        strokeWidth = 3.dp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = state.mediaPreparationMessage ?: "Optimizing video for Watch Party...",
+                        fontFamily = Geist_Font,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 15.sp
+                    )
+                }
+            } else if (state.selectedMediaUri != null || playerState.mediaUri != null) {
                 PlayerScreen(
                     viewModel = viewModel.playerViewModel,
                     onBackClick = { showExitWarningDialog = true }
@@ -108,12 +123,12 @@ fun PartyRoomScreen(
             }
         }
 
-        // 2. P2P VIDEO TRANSFER PROGRESS WIDGET
+        // 2. P2P VIDEO TRANSFER PROGRESS WIDGET (Disabled for HTTP/Fast-Start streaming)
         PayloadTransferProgressWidget(
-            isVisible = state.isTransferring,
-            progress = state.transferProgress,
-            statusMessage = state.transferStatusMessage,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            isVisible = false,
+            progress = 0f,
+            statusMessage = null,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
         )
 
         // 3. PARTY MEMBERS LIST (Host pinned at top, Joinees below)

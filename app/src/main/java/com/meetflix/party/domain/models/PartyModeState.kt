@@ -14,6 +14,8 @@ data class PartyModeState(
     val selectedMediaUri: String? = null,
     val discoveredParties: List<AvailableHost> = emptyList(),
     val connectedMembers: List<AvailableHost> = emptyList(),
+    val isPreparingMedia: Boolean = false,
+    val mediaPreparationMessage: String? = null,
     val isTransferring: Boolean = false,
     val transferProgress: Float = 0f,
     val transferStatusMessage: String? = null,
