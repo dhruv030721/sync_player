@@ -5,6 +5,8 @@
     <string name="tab_upload">Upload</string>
     <string name="tab_profile">Profile</string>
     <string name="tab_party_mode">Party Mode</string>
+    <string name="tab_host_party">Host Party</string>
+    <string name="tab_search_party">Join Party</string>
     <string name="main_tab_transition">Main tab transition</string>
     <string name="upload_and_stream">Upload &amp; Stream</string>
     <string name="upload_and_stream_desc">Drag and drop your files or click to browse. Upload your documents, images, and files securely.</string>

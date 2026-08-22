@@ -83,7 +83,7 @@ fun MFXHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
+                /*Box(
                     modifier = Modifier
                         .size(48.dp),
                     contentAlignment = Alignment.Center
@@ -93,7 +93,7 @@ fun MFXHeader(
                         contentDescription = stringResource(R.string.cd_meetflix_logo),
                         modifier = Modifier.size(48.dp)
                     )
-                }
+                }*/
 
                 Text(
                     text = stringResource(R.string.app_name),

@@ -126,15 +126,15 @@ fun MFXTabBar(
                             painter = painterResource(id = tab.iconRes),
                             contentDescription = null,
                             tint = contentColor,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(32.dp)
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = stringResource(id = tab.titleRes),
-                            fontSize = 11.sp,
-                            lineHeight = 11.sp,
+                            fontSize = 12.sp,
+                            lineHeight = 12.sp,
                             fontFamily = Geist_Font,
                             color = contentColor,
                             fontWeight = FontWeight.SemiBold,
