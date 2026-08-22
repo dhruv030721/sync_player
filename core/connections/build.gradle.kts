@@ -48,5 +48,5 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.play.services.nearby)
     implementation(libs.kotlinx.serialization.json)
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 }
