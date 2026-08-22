@@ -23,6 +23,7 @@ import com.meetflix.connections.domain.models.ConnectionRole
 import com.meetflix.connections.domain.models.HostConnectionStatus
 import com.meetflix.connections.domain.models.NearbyConnectionState
 import com.meetflix.connections.domain.models.VideoChunkMeta
+import com.meetflix.stream.data.LocalMediaServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -382,7 +383,7 @@ class NearbyConnectionsManager(private val context: Context) {
                     // Auto-send video stream URL to newly connected peer if host has an active video!
                     hostVideoUri?.let { videoUri ->
                         Log.d(TAG, "Peer connected ($endpointId). Auto-sending host video stream URL...")
-                        val localMediaServer = NearbyRepository.getInstance(context).localMediaServer
+                        val localMediaServer = LocalMediaServer(context)
                         val streamUrl = localMediaServer.getStreamUrl()
                         sendPayload(endpointId, "STREAM_URL:$streamUrl")
                     }
@@ -477,7 +478,7 @@ class NearbyConnectionsManager(private val context: Context) {
                                 var initialPlayTriggered = false
                                 var lastRead = android.os.SystemClock.elapsedRealtime()
                                 val buffer = ByteArray(64 * 1024)
-                                val localMediaServer = NearbyRepository.getInstance(context).localMediaServer
+                                val localMediaServer = LocalMediaServer(context)
 
                                 tempFile.outputStream().use { output ->
                                     while (!Thread.interrupted()) {

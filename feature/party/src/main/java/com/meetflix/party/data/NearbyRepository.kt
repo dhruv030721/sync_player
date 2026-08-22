@@ -1,6 +1,7 @@
-package com.meetflix.connections.data
+package com.meetflix.party.data
 
 import android.content.Context
+import com.meetflix.connections.data.NearbyConnectionsManager
 import com.meetflix.player.data.ExoPlayerManager
 import com.meetflix.player.data.PlayerSyncManager
 import com.meetflix.stream.data.LocalMediaServer

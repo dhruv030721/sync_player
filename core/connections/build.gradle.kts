@@ -39,7 +39,6 @@ android {
 dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:stream"))
-    implementation(project(":core:player"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -48,5 +47,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.play.services.nearby)
+    implementation(libs.kotlinx.serialization.json)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
 }

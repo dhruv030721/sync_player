@@ -8,7 +8,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewModelScope
 import com.meetflix.connections.data.NearbyConnectionsManager
-import com.meetflix.connections.data.NearbyRepository
+import com.meetflix.party.data.NearbyRepository
 import com.meetflix.connections.domain.models.AvailableHost
 import com.meetflix.party.domain.models.PartyModeState
 import com.meetflix.party.domain.models.PartyScreenMode
