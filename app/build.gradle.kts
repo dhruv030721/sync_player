@@ -5,19 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val aarFile = file("libs/ffmpeg-kit.aar")
-val extractedDir = layout.buildDirectory.dir("extracted-aar").get().asFile
-
-val extractAar = tasks.register<Copy>("extractAar") {
-    from(zipTree(aarFile))
-    into(extractedDir)
-}
-
-tasks.named("preBuild") {
-    dependsOn("extractAar")
-}
-
-
 android {
     namespace = "com.meetflix"
     compileSdk = 36
@@ -52,16 +39,15 @@ android {
     buildFeatures {
         compose = true
     }
-    sourceSets {
-        getByName("main").apply {
-            res.srcDir(File(extractedDir, "res"))
-            assets.srcDir(File(extractedDir, "assets"))
-            jniLibs.srcDir(File(extractedDir, "jni"))
-        }
-    }
 }
 
 dependencies {
+    implementation(project(":core:designsystem"))
+    implementation(project(":core:stream"))
+    implementation(project(":core:connections"))
+    implementation(project(":core:player"))
+    implementation(project(":feature:party"))
+
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -82,6 +68,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    api(files(File(extractedDir, "classes.jar")).builtBy(extractAar))
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 }
