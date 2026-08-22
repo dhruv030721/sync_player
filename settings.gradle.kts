@@ -20,5 +20,10 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Meetflix"
+include(":core:designsystem")
+include(":core:stream")
+include(":core:connections")
+include(":core:player")
+include(":feature:party")
 include(":app")
  

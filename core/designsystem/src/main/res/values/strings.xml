@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">Meetflix</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_nearby">Nearby</string>
+    <string name="tab_upload">Upload</string>
+    <string name="tab_profile">Profile</string>
+    <string name="tab_party_mode">Party Mode</string>
+    <string name="tab_host_party">Host Party</string>
+    <string name="tab_search_party">Join Party</string>
+    <string name="main_tab_transition">Main tab transition</string>
+    <string name="upload_and_stream">Upload &amp; Stream</string>
+    <string name="upload_and_stream_desc">Drag and drop your files or click to browse. Upload your documents, images, and files securely.</string>
+    <string name="make_it_sharable">Make it Sharable</string>
+    <string name="upload_your_files">Upload your files</string>
+    <string name="upload_files_help">Drag and drop your files here, or click to browse</string>
+    <string name="browse_files">Browse Files</string>
+    <string name="cd_logo">Logo</string>
+    <string name="cd_meetflix_logo">Meetflix logo</string>
+    <string name="cd_profile_button">Open profile</string>
+    <string name="cd_upload_icon">Upload icon</string>
+    <string name="cd_device">Device</string>
+    <string name="cd_connect">Connect</string>
+    <string name="search_connection">Search for Devices</string>
+    <string name="connect">Connect</string>
+    <string name="connected">Connected</string>
+</resources>
