@@ -16,6 +16,7 @@ import com.meetflix.player.data.ExoPlayerManager
 import com.meetflix.player.data.PlayerSyncManager
 import com.meetflix.player.domain.models.PlaybackAction
 import com.meetflix.player.presentation.viewmodel.PlayerViewModel
+import com.meetflix.player.presentation.viewmodel.PlayerViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
