@@ -70,108 +70,138 @@ fun PartyRoomScreen(
         onDismiss = { showExitWarningDialog = false }
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        // 1. TOP VIDEO PLAYER (Top Half)
+    if (playerState.isFullScreen) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-                .background(Color.Black),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .background(Color.Black)
         ) {
-            if (state.selectedMediaUri != null || playerState.mediaUri != null) {
-                PlayerScreen(
-                    viewModel = viewModel.playerViewModel,
-                    onBackClick = { showExitWarningDialog = true }
-                )
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Preparing Watch Party Stream...",
-                        fontFamily = Geist_Font,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Receiving video P2P from party host",
-                        fontFamily = Geist_Font,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 13.sp
-                    )
+            PlayerScreen(
+                viewModel = viewModel.playerViewModel,
+                onBackClick = {
+                    viewModel.playerViewModel.onAction(com.meetflix.player.domain.models.PlaybackAction.ToggleFullScreen)
                 }
-            }
+            )
         }
-
-        // 2. P2P VIDEO TRANSFER PROGRESS WIDGET
-        PayloadTransferProgressWidget(
-            isVisible = state.isTransferring,
-            progress = state.transferProgress,
-            statusMessage = state.transferStatusMessage,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-        )
-
-        // 3. PARTY MEMBERS LIST (Host pinned at top, Joinees below)
+    } else {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(16.dp)
+                .fillMaxSize()
+                .background(Color.Black)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // 1. TOP VIDEO PLAYER (Top Half)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp)
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "PARTY MEMBERS (${state.connectedMembers.size + 1})",
-                    fontFamily = Geist_Font,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = Color(0xFF10B981)
-                )
-
-                MFXButton(
-                    text = if (isHostMode) "End Party" else "Leave Party",
-                    onClick = { showExitWarningDialog = true }
-                )
+                if (state.isPreparingMedia) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = Color(0xFF10B981),
+                            strokeWidth = 3.dp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = state.mediaPreparationMessage ?: "Optimizing video for Watch Party...",
+                            fontFamily = Geist_Font,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 15.sp
+                        )
+                    }
+                } else if (state.selectedMediaUri != null || playerState.mediaUri != null) {
+                    PlayerScreen(
+                        viewModel = viewModel.playerViewModel,
+                        onBackClick = { showExitWarningDialog = true }
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Preparing Watch Party Stream...",
+                            fontFamily = Geist_Font,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Receiving video P2P from party host",
+                            fontFamily = Geist_Font,
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Construct member list: Host pinned at top
-            val localHostDevice = AvailableHost(
-                endpointId = "local_device",
-                endpointName = "${state.localDeviceName} (You)",
-                status = HostConnectionStatus.CONNECTED
+            // 2. P2P VIDEO TRANSFER PROGRESS WIDGET (Disabled for HTTP/Fast-Start streaming)
+            PayloadTransferProgressWidget(
+                isVisible = false,
+                progress = 0f,
+                statusMessage = null,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
             )
 
-            val hostMember = if (isHostMode) localHostDevice else state.connectedMembers.firstOrNull() ?: localHostDevice
-            val joineeMembers = if (isHostMode) state.connectedMembers else state.connectedMembers.filterNot { it.endpointId == hostMember.endpointId }
+            // 3. PARTY MEMBERS LIST (Host pinned at top, Joinees below)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "PARTY MEMBERS (${state.connectedMembers.size + 1})",
+                        fontFamily = Geist_Font,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = Color(0xFF10B981)
+                    )
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // PINNED HOST CARD (ALWAYS AT TOP)
-                item(key = "host_pinned_${hostMember.endpointId}") {
-                    PartyMemberListCard(
-                        member = hostMember,
-                        isHostRole = true
+                    MFXButton(
+                        text = if (isHostMode) "End Party" else "Leave Party",
+                        onClick = { showExitWarningDialog = true }
                     )
                 }
 
-                // CONNECTED JOINEES LISTED BELOW HOST
-                items(joineeMembers, key = { it.endpointId }) { joinee ->
-                    PartyMemberListCard(
-                        member = joinee,
-                        isHostRole = false,
-                        onDisconnectClick = if (isHostMode) {
-                            { viewModel.nearbyConnectionsManager.disconnectEndpoint(joinee.endpointId) }
-                        } else null
-                    )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Construct member list: Host pinned at top
+                val localHostDevice = AvailableHost(
+                    endpointId = "local_device",
+                    endpointName = "${state.localDeviceName} (You)",
+                    status = HostConnectionStatus.CONNECTED
+                )
+
+                val hostMember = if (isHostMode) localHostDevice else state.connectedMembers.firstOrNull() ?: localHostDevice
+                val joineeMembers = if (isHostMode) state.connectedMembers else state.connectedMembers.filterNot { it.endpointId == hostMember.endpointId }
+
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // PINNED HOST CARD (ALWAYS AT TOP)
+                    item(key = "host_pinned_${hostMember.endpointId}") {
+                        PartyMemberListCard(
+                            member = hostMember,
+                            isHostRole = true
+                        )
+                    }
+
+                    // CONNECTED JOINEES LISTED BELOW HOST
+                    items(joineeMembers, key = { it.endpointId }) { joinee ->
+                        PartyMemberListCard(
+                            member = joinee,
+                            isHostRole = false,
+                            onDisconnectClick = if (isHostMode) {
+                                { viewModel.nearbyConnectionsManager.disconnectEndpoint(joinee.endpointId) }
+                            } else null
+                        )
+                    }
                 }
             }
         }

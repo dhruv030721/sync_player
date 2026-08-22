@@ -26,7 +26,8 @@ fun MFXSeekBar(
     currentPositionMs: Long,
     durationMs: Long,
     onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val duration = durationMs.coerceAtLeast(1L)
     val progress = (currentPositionMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
@@ -46,14 +47,18 @@ fun MFXSeekBar(
 
         Slider(
             value = progress,
+            enabled = enabled,
             onValueChange = { newFraction ->
                 val targetMs = (newFraction * duration).toLong()
                 onSeek(targetMs)
             },
             colors = SliderDefaults.colors(
-                thumbColor = PrimaryColor,
-                activeTrackColor = PrimaryColor,
-                inactiveTrackColor = DarkGrayColor
+                thumbColor = if (enabled) PrimaryColor else Color.Gray,
+                activeTrackColor = if (enabled) PrimaryColor else Color.Gray,
+                inactiveTrackColor = DarkGrayColor,
+                disabledThumbColor = Color.Gray,
+                disabledActiveTrackColor = Color.Gray,
+                disabledInactiveTrackColor = DarkGrayColor
             ),
             modifier = Modifier
                 .weight(1f)
@@ -71,7 +76,12 @@ fun MFXSeekBar(
 
 private fun formatTime(ms: Long): String {
     val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(ms.coerceAtLeast(0L))
-    val minutes = totalSeconds / 60
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
-    return String.format("%02d:%02d", minutes, seconds)
+    return if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
+    }
 }

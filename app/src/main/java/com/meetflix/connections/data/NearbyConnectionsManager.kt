@@ -379,10 +379,12 @@ class NearbyConnectionsManager(private val context: Context) {
                         )
                     }
 
-                    // Auto-send video stream payload to newly connected peer if host has an active video!
+                    // Auto-send video stream URL to newly connected peer if host has an active video!
                     hostVideoUri?.let { videoUri ->
-                        Log.d(TAG, "Peer connected ($endpointId). Auto-sending host video stream payload: $videoUri")
-                        sendVideoStreamPayload(endpointId, videoUri)
+                        Log.d(TAG, "Peer connected ($endpointId). Auto-sending host video stream URL...")
+                        val localMediaServer = NearbyRepository.getInstance(context).localMediaServer
+                        val streamUrl = localMediaServer.getStreamUrl()
+                        sendPayload(endpointId, "STREAM_URL:$streamUrl")
                     }
                 }
                 ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {

@@ -40,52 +40,67 @@ class PlayerViewModel(
     private var heartbeatJob: Job? = null
 
     init {
-        // Start auto-hide timer on launch
-        resetControlsTimer()
-
-        // Observe play state to start/stop periodic heartbeat broadcast
+        // Observe play state to handle 500ms controls auto-hide and heartbeat loop
         viewModelScope.launch {
             uiState.collect { state ->
-                if (state.isPlaying && heartbeatJob == null) {
-                    startHeartbeatLoop()
-                } else if (!state.isPlaying) {
+                if (state.isPlaying) {
+                    if (heartbeatJob == null) {
+                        startHeartbeatLoop()
+                    }
+                    if (state.isControlsVisible && (controlsHideJob == null || !controlsHideJob!!.isActive)) {
+                        resetControlsTimer()
+                    }
+                } else {
                     stopHeartbeatLoop()
+                    controlsHideJob?.cancel()
+                    exoPlayerManager.setControlsVisibility(true)
                 }
             }
         }
     }
 
     fun onAction(action: PlaybackAction) {
-        resetControlsTimer()
-
         when (action) {
             PlaybackAction.Play -> {
                 exoPlayerManager.play()
                 broadcastSync(PlayerSyncActionType.PLAY)
+                resetControlsTimer()
             }
             PlaybackAction.Pause -> {
                 exoPlayerManager.pause()
                 broadcastSync(PlayerSyncActionType.PAUSE)
+                controlsHideJob?.cancel()
+                exoPlayerManager.setControlsVisibility(true)
             }
             is PlaybackAction.Seek -> {
+                if (!uiState.value.canSeek) return
                 exoPlayerManager.seekTo(action.positionMs)
                 broadcastSync(PlayerSyncActionType.SEEK)
+                resetControlsTimer()
             }
             is PlaybackAction.SetSpeed -> {
                 exoPlayerManager.setPlaybackSpeed(action.speed)
+                resetControlsTimer()
             }
             is PlaybackAction.LoadMedia -> {
                 exoPlayerManager.setMediaUri(action.uri, action.title)
                 broadcastSync(PlayerSyncActionType.SET_MEDIA, mediaUri = action.uri)
+                resetControlsTimer()
             }
             PlaybackAction.ToggleControls -> {
                 val currentVisibility = uiState.value.isControlsVisible
-                if (!currentVisibility) {
+                val nextVisibility = !currentVisibility
+                exoPlayerManager.setControlsVisibility(nextVisibility)
+                if (nextVisibility) {
                     resetControlsTimer()
+                } else {
+                    controlsHideJob?.cancel()
                 }
             }
             PlaybackAction.ToggleFullScreen -> {
-                // Toggled by UI layout logic
+                val currentFullScreen = uiState.value.isFullScreen
+                exoPlayerManager.setFullScreen(!currentFullScreen)
+                resetControlsTimer()
             }
         }
     }
@@ -102,8 +117,11 @@ class PlayerViewModel(
 
     private fun resetControlsTimer() {
         controlsHideJob?.cancel()
-        controlsHideJob = viewModelScope.launch {
-            delay(3500L) // Auto-hide controls after 3.5 seconds
+        if (uiState.value.isPlaying) {
+            controlsHideJob = viewModelScope.launch {
+                delay(500L) // Hide player controls and seekbar after 500ms of playback
+                exoPlayerManager.setControlsVisibility(false)
+            }
         }
     }
 

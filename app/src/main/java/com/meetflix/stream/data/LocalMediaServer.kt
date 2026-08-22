@@ -40,17 +40,27 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
     @Volatile
     private var expectedFileSize: Long = -1L
 
+    @Volatile
+    private var fastStartMeta: FastStartRemuxer.FastStartMeta? = null
+
     fun setMediaUri(uri: Uri) {
         this.mediaUri = uri
         this.mediaFile = null
         this.expectedFileSize = -1L
-        Log.d(TAG, "LocalMediaServer configured with Uri: $uri")
+        this.fastStartMeta = null
+        Log.d(TAG, "LocalMediaServer configured with Uri: $uri. Analyzing MP4 for Fast-Start...")
+        kotlin.concurrent.thread(name = "MeetflixFastStartAnalyzer") {
+            val meta = FastStartRemuxer.analyzeAndPrepareFastStart(context, uri)
+            fastStartMeta = meta
+            Log.d(TAG, "Fast-Start analysis completed for $uri: isFastStartNeeded=${meta?.isFastStartNeeded}, virtualSize=${meta?.totalVirtualSize}")
+        }
     }
 
     fun setMediaFile(file: File, totalExpectedBytes: Long = -1L) {
         this.mediaFile = file
         this.mediaUri = null
         this.expectedFileSize = totalExpectedBytes
+        this.fastStartMeta = null
         Log.d(TAG, "LocalMediaServer configured with File: ${file.absolutePath}, expectedBytes=$totalExpectedBytes")
     }
 
@@ -104,8 +114,10 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
 
             val targetFile = mediaFile
             val targetUri = mediaUri
+            val meta = fastStartMeta
 
             val fileSize: Long = when {
+                meta != null && meta.isFastStartNeeded -> meta.totalVirtualSize
                 expectedFileSize > 0L -> expectedFileSize
                 targetFile != null && targetFile.exists() -> targetFile.length()
                 targetUri != null -> {
@@ -174,6 +186,12 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
         length: Long,
         outputStream: OutputStream
     ) {
+        val meta = fastStartMeta
+        if (meta != null && meta.isFastStartNeeded && uri != null) {
+            streamVirtualFastStartVideo(meta, uri, startByte, length, outputStream)
+            return
+        }
+
         val buffer = ByteArray(64 * 1024)
         var remainingBytes = length
 
@@ -210,6 +228,61 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
                         if (read <= 0) break
                         outputStream.write(buffer, 0, read)
                         remainingBytes -= read
+                    }
+                }
+            }
+        }
+        outputStream.flush()
+    }
+
+    private fun streamVirtualFastStartVideo(
+        meta: FastStartRemuxer.FastStartMeta,
+        uri: Uri,
+        startByte: Long,
+        length: Long,
+        outputStream: OutputStream
+    ) {
+        val ftypEnd = meta.ftypBox.size
+        val moovEnd = meta.ftypBox.size + meta.moovBox.size
+        val buffer = ByteArray(64 * 1024)
+
+        var virtualPos = startByte
+        var remaining = length
+
+        val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: return
+        pfd.use { fd ->
+            FileInputStream(fd.fileDescriptor).use { fis ->
+                while (remaining > 0 && virtualPos < meta.totalVirtualSize) {
+                    when {
+                        virtualPos < ftypEnd -> {
+                            val chunkSize = (ftypEnd - virtualPos).coerceAtMost(remaining).toInt().coerceAtMost(buffer.size)
+                            fis.channel.position(meta.ftypBox.offset + virtualPos)
+                            val read = fis.read(buffer, 0, chunkSize)
+                            if (read <= 0) break
+                            outputStream.write(buffer, 0, read)
+                            virtualPos += read
+                            remaining -= read
+                        }
+                        virtualPos in ftypEnd until moovEnd -> {
+                            val moovRamOffset = (virtualPos - ftypEnd).toInt()
+                            val bytesAvailableInMoov = meta.patchedMoovBytes.size - moovRamOffset
+                            val chunkSize = bytesAvailableInMoov.coerceAtMost(remaining.toInt()).coerceAtMost(buffer.size)
+                            if (chunkSize <= 0) break
+                            outputStream.write(meta.patchedMoovBytes, moovRamOffset, chunkSize)
+                            virtualPos += chunkSize
+                            remaining -= chunkSize
+                        }
+                        else -> {
+                            val mdatVirtualOffset = virtualPos - moovEnd
+                            val realMdatOffset = meta.mdatBox.offset + mdatVirtualOffset
+                            val chunkSize = remaining.coerceAtMost(buffer.size.toLong()).toInt()
+                            fis.channel.position(realMdatOffset)
+                            val read = fis.read(buffer, 0, chunkSize)
+                            if (read <= 0) break
+                            outputStream.write(buffer, 0, read)
+                            virtualPos += read
+                            remaining -= read
+                        }
                     }
                 }
             }

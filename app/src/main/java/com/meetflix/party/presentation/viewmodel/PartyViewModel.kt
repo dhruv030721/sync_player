@@ -16,13 +16,15 @@ import com.meetflix.player.data.ExoPlayerManager
 import com.meetflix.player.data.PlayerSyncManager
 import com.meetflix.player.domain.models.PlaybackAction
 import com.meetflix.player.presentation.viewmodel.PlayerViewModel
-import com.meetflix.player.presentation.viewmodel.PlayerViewModelFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Design Pattern: Observer / ViewModel (MVI State Machine) / ViewModelStoreOwner
@@ -97,21 +99,28 @@ class PartyViewModel(application: Application) : AndroidViewModel(application), 
         nearbyConnectionsManager.setHostVideoUri(videoUri)
         val localMediaServer = repository.localMediaServer
         localMediaServer.setMediaUri(videoUri)
-        val streamUrl = localMediaServer.getStreamUrl()
 
         _uiState.update {
             it.copy(
+                isPreparingMedia = true,
+                mediaPreparationMessage = "Optimizing video for Watch Party...",
                 mode = PartyScreenMode.HOSTING,
                 activePartyTitle = title,
-                selectedMediaUri = streamUrl
+                selectedMediaUri = videoUri.toString()
             )
         }
-        nearbyConnectionsManager.startAdvertising(customName = "${nearbyConnectionsManager.uiState.value.localEndpointName}'s Party")
-        playerViewModel.onAction(PlaybackAction.LoadMedia(streamUrl, title))
 
-        nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
-            nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
-            nearbyConnectionsManager.sendVideoStreamPayload(host.endpointId, videoUri)
+        nearbyConnectionsManager.startAdvertising(customName = "${nearbyConnectionsManager.uiState.value.localEndpointName}'s Party")
+        playerViewModel.onAction(PlaybackAction.LoadMedia(videoUri.toString(), title))
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val streamUrl = localMediaServer.getStreamUrl()
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(isPreparingMedia = false) }
+                nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
+                    nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
+                }
+            }
         }
     }
 
@@ -119,14 +128,24 @@ class PartyViewModel(application: Application) : AndroidViewModel(application), 
         nearbyConnectionsManager.setHostVideoUri(videoUri)
         val localMediaServer = repository.localMediaServer
         localMediaServer.setMediaUri(videoUri)
-        val streamUrl = localMediaServer.getStreamUrl()
 
-        _uiState.update { it.copy(selectedMediaUri = streamUrl) }
-        playerViewModel.onAction(PlaybackAction.LoadMedia(streamUrl, "Stream Video"))
+        _uiState.update {
+            it.copy(
+                isPreparingMedia = true,
+                mediaPreparationMessage = "Optimizing video stream...",
+                selectedMediaUri = videoUri.toString()
+            )
+        }
+        playerViewModel.onAction(PlaybackAction.LoadMedia(videoUri.toString(), "Stream Video"))
 
-        nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
-            nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
-            nearbyConnectionsManager.sendVideoStreamPayload(host.endpointId, videoUri)
+        viewModelScope.launch(Dispatchers.IO) {
+            val streamUrl = localMediaServer.getStreamUrl()
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(isPreparingMedia = false) }
+                nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
+                    nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
+                }
+            }
         }
     }
 
