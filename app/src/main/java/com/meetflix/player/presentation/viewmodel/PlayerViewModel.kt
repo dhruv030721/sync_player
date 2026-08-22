@@ -1,6 +1,7 @@
 package com.meetflix.player.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.meetflix.player.data.ExoPlayerManager
 import com.meetflix.player.data.PlayerSyncManager
@@ -11,6 +12,17 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
+/** Design Pattern: Factory - Factory for instantiating PlayerViewModel with ExoPlayerManager and PlayerSyncManager */
+class PlayerViewModelFactory(
+    private val exoPlayerManager: ExoPlayerManager,
+    private val playerSyncManager: PlayerSyncManager
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return PlayerViewModel(exoPlayerManager, playerSyncManager) as T
+    }
+}
 
 /**
  * Design Pattern: Observer / StateFlow (MVI)
