@@ -26,13 +26,16 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 /**
- * Design Pattern: Observer / ViewModel (MVI State Machine) / ViewModelStoreOwner
+ * Design Pattern: Observer / ViewModel (MVI State Machine) / ViewModelStoreOwner / Hilt Injection
  * Central ViewModel consuming application-wide NearbyRepository singletons to manage Party Mode lifecycle,
  * host/guest discovery, P2P video streaming, and synchronized ExoPlayer playback state.
  */
-class PartyViewModel(application: Application) : AndroidViewModel(application), ViewModelStoreOwner {
+@HiltViewModel
+class PartyViewModel @Inject constructor(application: Application) : AndroidViewModel(application), ViewModelStoreOwner {
 
     private val internalViewModelStore = ViewModelStore()
     override val viewModelStore: ViewModelStore

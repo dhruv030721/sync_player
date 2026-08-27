@@ -26,11 +26,12 @@ import com.meetflix.core.ui.components.MFXHeader
 import com.meetflix.core.ui.components.MFXTabBar
 import com.meetflix.core.ui.components.MFXTabItem
 import com.meetflix.core.ui.theme.meetflixTheme
-import com.meetflix.home.presentation.screen.HomeScreen
 import com.meetflix.party.presentation.screen.HostPartyScreen
 import com.meetflix.party.presentation.screen.JoinPartyScreen
 import com.meetflix.profile.presentation.screen.ProfileScreen
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,9 +40,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             meetflixTheme {
                 val tabs = listOf(
-                    MFXTabItem(R.string.tab_home, R.drawable.ic_tab_home),
-                    MFXTabItem(R.string.tab_host_party, R.drawable.ic_tab_party),
-                    MFXTabItem(R.string.tab_search_party, R.drawable.wifi_icon)
+                    MFXTabItem(R.string.tab_host_party, R.drawable.ic_host),
+                    MFXTabItem(R.string.tab_search_party, R.drawable.ic_join_arrow)
                 )
                 var selectedTabIndex by remember { mutableIntStateOf(0) }
 
@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     containerColor = Color.Black,
                     topBar = {
                         MFXHeader(
-                            onProfileClick = { tabHandler(3) }
+                            onProfileClick = { tabHandler(2) }
                         )
                     },
                     bottomBar = {
@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                                 .windowInsetsPadding(
                                     WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                                 )
-                                .padding(20.dp)
+                                .padding(vertical = 10.dp)
                         )
                     }
                 ) { innerPadding ->
@@ -75,10 +75,9 @@ class MainActivity : ComponentActivity() {
                         label = stringResource(R.string.main_tab_transition)
                     ) { tab ->
                         when (tab) {
-                            0 -> HomeScreen(innerPadding)
-                            1 -> HostPartyScreen(innerPadding)
-                            2 -> JoinPartyScreen(innerPadding)
-                            3 -> ProfileScreen(innerPadding)
+                            0 -> HostPartyScreen(innerPadding)
+                            1 -> JoinPartyScreen(innerPadding)
+                            2 -> ProfileScreen(innerPadding)
                         }
                     }
                 }

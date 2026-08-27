@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.dagger.hilt.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -69,4 +71,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.dagger.hilt.android)
+    ksp(libs.dagger.hilt.android.compiler)
 }
