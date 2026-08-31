@@ -18,12 +18,14 @@ import com.meetflix.connections.domain.models.AvailableHost
 import com.meetflix.core.ui.theme.meetflixTheme
 import com.meetflix.party.presentation.screen.PartyRoomScreen
 import com.meetflix.party.presentation.viewmodel.PartyViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
- * Design Pattern: Clean Architecture Presentation Activity
+ * Design Pattern: Clean Architecture Presentation Activity / Hilt Entry Point
  * Dedicated Activity opening when a user launches or joins a party watch room.
  * Manages orientation locking, lifecycle cleanup, and renders PartyRoomScreen.
  */
+@AndroidEntryPoint
 class PartyRoomActivity : ComponentActivity() {
 
     private val viewModel: PartyViewModel by viewModels()

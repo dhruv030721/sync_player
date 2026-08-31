@@ -48,77 +48,72 @@ fun MFXTabBar(
     tabHandler: (Int) -> Unit,
     modifier: Modifier
 ) {
-    val barShape = RoundedCornerShape(24.dp)
+    val cornerRadius = RoundedCornerShape(50.dp)
 
     Box(
-        modifier = modifier
-            .shadow(
-                elevation = 18.dp,
-                shape = barShape,
-                ambientColor = PrimaryColor.copy(alpha = 0.2f),
-                spotColor = Color.Black.copy(alpha = 0.45f)
-            )
-            .clip(barShape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.16f),
-                        DarkGrayColor.copy(alpha = 0.78f),
-                        Color.Black.copy(alpha = 0.42f)
-                    )
-                )
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.08f)
-                    )
-                ),
-                shape = barShape
-            )
-            .padding(6.dp)
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = modifier
+                .shadow(
+                elevation = 18.dp,
+                shape = cornerRadius,
+                ambientColor = PrimaryColor.copy(alpha = 0.2f),
+                spotColor = Color.Black.copy(alpha = 0.45f))
+                .clip(cornerRadius)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.16f),
+                            DarkGrayColor.copy(alpha = 0.78f),
+                            Color.Black.copy(alpha = 0.42f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.35f),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
+                    shape = cornerRadius
+                )
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEachIndexed { index, tab ->
                 val selected = selectedTabIndex == index
                 val contentColor = if (selected) Color.LightGray else Color(0xFFB9B9C3)
-                val selectedShape = RoundedCornerShape(18.dp)
 
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(horizontal = 3.dp, vertical = 2.dp)
+                        .padding(8.dp)
                         .then(
                             if (selected) {
                                 Modifier
                                     .background(
                                         brush = blackWhiteGradient,
-                                        shape = selectedShape
+                                        shape = cornerRadius
                                     )
                                     .border(
                                         width = 0.8.dp,
                                         color = Color.White.copy(alpha = 0.22f),
-                                        shape = selectedShape
+                                        shape = cornerRadius
                                     )
                             } else {
                                 Modifier.background(Color.Transparent)
                             }
                         )
-                        .clip(selectedShape)
+                        .clip(cornerRadius)
                         .clickable { tabHandler(index) },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 4.dp),
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -126,7 +121,7 @@ fun MFXTabBar(
                             painter = painterResource(id = tab.iconRes),
                             contentDescription = null,
                             tint = contentColor,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(24.dp)
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))

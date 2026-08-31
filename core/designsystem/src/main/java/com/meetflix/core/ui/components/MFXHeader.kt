@@ -83,32 +83,10 @@ fun MFXHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                /*Box(
-                    modifier = Modifier
-                        .size(48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.meetflix_logo_new),
-                        contentDescription = stringResource(R.string.cd_meetflix_logo),
-                        modifier = Modifier.size(48.dp)
-                    )
-                }*/
-
-                Text(
-                    text = stringResource(R.string.app_name),
-                    color = Color.White,
-                    style = TextStyle(
-                        fontFamily = FontFamily.Cursive,
-                        color = Color.LightGray,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 34.sp,
-                        shadow = Shadow(
-                            color = PrimaryColor.copy(alpha = 0.7f),
-                            offset = Offset(0f, 2f),
-                            blurRadius = 10f
-                        )
-                    )
+                Image(
+                    painter = painterResource(R.drawable.meetflix_title),
+                    contentDescription = stringResource(R.string.cd_profile_button),
+                    modifier = Modifier.size(102.dp)
                 )
             }
 
