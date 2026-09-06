@@ -39,6 +39,9 @@ class PartyRoomActivity : ComponentActivity() {
 
         fun launchAsHost(context: Context, videoUri: Uri, partyTitle: String = "Watch Party") {
             val intent = Intent(context, PartyRoomActivity::class.java).apply {
+                action = Intent.ACTION_VIEW
+                setData(videoUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 putExtra(EXTRA_IS_HOST, true)
                 putExtra(EXTRA_VIDEO_URI, videoUri.toString())
                 putExtra(EXTRA_PARTY_TITLE, partyTitle)
@@ -70,13 +73,13 @@ class PartyRoomActivity : ComponentActivity() {
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN)
 
         val isHost = intent.getBooleanExtra(EXTRA_IS_HOST, false)
-        val videoUriString = intent.getStringExtra(EXTRA_VIDEO_URI)
+        val videoUri = intent.data ?: intent.getStringExtra(EXTRA_VIDEO_URI)?.let { Uri.parse(it) }
         val partyTitle = intent.getStringExtra(EXTRA_PARTY_TITLE) ?: "Watch Party"
         val hostEndpointId = intent.getStringExtra(EXTRA_HOST_ENDPOINT_ID)
         val hostEndpointName = intent.getStringExtra(EXTRA_HOST_ENDPOINT_NAME) ?: "Party Host"
 
-        if (isHost && videoUriString != null) {
-            viewModel.launchParty(Uri.parse(videoUriString), partyTitle)
+        if (isHost && videoUri != null) {
+            viewModel.launchParty(videoUri, partyTitle)
         } else if (!isHost && hostEndpointId != null) {
             val host = AvailableHost(endpointId = hostEndpointId, endpointName = hostEndpointName)
             viewModel.joinParty(host)

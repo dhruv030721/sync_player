@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import com.meetflix.player.domain.models.PlayerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +34,19 @@ class ExoPlayerManager(context: Context) {
         private const val TAG = "MeetflixStream"
     }
 
-    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    /** Design Pattern: Factory - Configured ExoPlayer with extended HTTP timeouts and transient error retry for P2P streaming */
+    private val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+        .setConnectTimeoutMs(30_000)
+        .setReadTimeoutMs(30_000)
+        .setAllowCrossProtocolRedirects(true)
+
+    private val mediaSourceFactory = DefaultMediaSourceFactory(context)
+        .setDataSourceFactory(httpDataSourceFactory)
+        .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(5))
+
+    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
+        .setMediaSourceFactory(mediaSourceFactory)
+        .build()
 
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
@@ -76,6 +91,8 @@ class ExoPlayerManager(context: Context) {
 
     fun setMediaUri(uri: String, title: String = "", autoPlay: Boolean = true) {
         Log.d(TAG, "ExoPlayerManager setMediaUri: $uri (title='$title', autoPlay=$autoPlay)")
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
         val mediaItem = MediaItem.fromUri(uri)
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.playWhenReady = autoPlay

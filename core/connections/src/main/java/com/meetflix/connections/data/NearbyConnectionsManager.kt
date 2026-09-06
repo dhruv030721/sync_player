@@ -23,6 +23,7 @@ import com.meetflix.connections.domain.models.ConnectionRole
 import com.meetflix.connections.domain.models.HostConnectionStatus
 import com.meetflix.connections.domain.models.NearbyConnectionState
 import com.meetflix.connections.domain.models.VideoChunkMeta
+import com.meetflix.stream.data.FastStartRemuxer
 import com.meetflix.stream.data.LocalMediaServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,10 +32,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.FileInputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.thread
 
 /**
  * Design Pattern: Manager / Native Wrapper
@@ -60,6 +63,17 @@ class NearbyConnectionsManager(private val context: Context) {
     private val receivedChunkSets = ConcurrentHashMap<String, MutableSet<Int>>()
     @Volatile
     private var hostVideoUri: Uri? = null
+
+    @Volatile
+    private var sharedLocalMediaServer: LocalMediaServer? = null
+
+    fun setLocalMediaServer(server: LocalMediaServer) {
+        this.sharedLocalMediaServer = server
+    }
+
+    private fun getActiveLocalMediaServer(): LocalMediaServer {
+        return sharedLocalMediaServer ?: LocalMediaServer(context).also { it.start() }
+    }
 
     private fun getDeviceName(): String {
         return "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
@@ -129,11 +143,13 @@ class NearbyConnectionsManager(private val context: Context) {
 
             Log.d(TAG, "Written chunk ${chunkMeta.chunkIndex + 1}/${chunkMeta.totalChunks} at ${chunkMeta.startByte}. Total received: ${set.size}/${chunkMeta.totalChunks}")
 
-            // Early Playback Trigger: Once 16 chunks (~1MB) are written, emit receivedVideoUri
+            // Early Playback Trigger: Once 16 chunks (~1MB) are written, configure LocalMediaServer and emit receivedVideoUri
             val earlyTriggerThreshold = 16.coerceAtMost(chunkMeta.totalChunks)
             _uiState.update { current ->
+                val server = getActiveLocalMediaServer()
                 val newUri = if (set.size >= earlyTriggerThreshold && current.receivedVideoUri == null) {
-                    Uri.fromFile(tempFile).toString()
+                    server.setMediaFile(tempFile, chunkMeta.totalFileSize)
+                    server.getServerUrl("127.0.0.1")
                 } else current.receivedVideoUri
 
                 current.copy(
@@ -272,6 +288,80 @@ class NearbyConnectionsManager(private val context: Context) {
         connectionsClient.sendPayload(endpointId, payload)
     }
 
+    private fun createFastStartStreamPayload(context: Context, uri: Uri, fileSize: Long): Payload? {
+        return try {
+            val meta = FastStartRemuxer.analyzeAndPrepareFastStart(context, uri)
+            if (meta == null || !meta.isFastStartNeeded) {
+                Log.d(TAG, "File does not need Fast-Start remuxing. Creating direct stream payload...")
+                val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
+                Payload.fromStream(pfd)
+            } else {
+                Log.d(TAG, "File needs Fast-Start remuxing for P2P streaming. Creating virtual Fast-Start pipe...")
+                val pipe = ParcelFileDescriptor.createPipe()
+                val readSide = pipe[0]
+                val writeSide = pipe[1]
+
+                thread (name = "MeetflixFastStartP2PWriter") {
+                    try {
+                        ParcelFileDescriptor.AutoCloseOutputStream(writeSide).use { outputStream ->
+                            val ftypEnd = meta.ftypBox.size
+                            val moovEnd = meta.ftypBox.size + meta.moovBox.size
+                            val buffer = ByteArray(64 * 1024)
+
+                            val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                            pfd?.use { fd ->
+                                FileInputStream(fd.fileDescriptor).use { fis ->
+                                    var virtualPos = 0L
+                                    val totalVirtualSize = meta.totalVirtualSize
+
+                                    while (virtualPos < totalVirtualSize) {
+                                        when {
+                                            virtualPos < ftypEnd -> {
+                                                val chunkSize = (ftypEnd - virtualPos).toInt().coerceAtMost(buffer.size)
+                                                fis.channel.position(meta.ftypBox.offset + virtualPos)
+                                                val read = fis.read(buffer, 0, chunkSize)
+                                                if (read <= 0) break
+                                                outputStream.write(buffer, 0, read)
+                                                virtualPos += read
+                                            }
+                                            virtualPos in ftypEnd until moovEnd -> {
+                                                val moovRamOffset = (virtualPos - ftypEnd).toInt()
+                                                val bytesAvailableInMoov = meta.patchedMoovBytes.size - moovRamOffset
+                                                val chunkSize = bytesAvailableInMoov.coerceAtMost(buffer.size)
+                                                if (chunkSize <= 0) break
+                                                outputStream.write(meta.patchedMoovBytes, moovRamOffset, chunkSize)
+                                                virtualPos += chunkSize
+                                            }
+                                            else -> {
+                                                val mdatVirtualOffset = virtualPos - moovEnd
+                                                val realMdatOffset = meta.mdatBox.offset + mdatVirtualOffset
+                                                val remaining = totalVirtualSize - virtualPos
+                                                val chunkSize = remaining.coerceAtMost(buffer.size.toLong()).toInt()
+                                                fis.channel.position(realMdatOffset)
+                                                val read = fis.read(buffer, 0, chunkSize)
+                                                if (read <= 0) break
+                                                outputStream.write(buffer, 0, read)
+                                                virtualPos += read
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            outputStream.flush()
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in FastStartP2PWriter: ${e.localizedMessage}", e)
+                    }
+                }
+                Payload.fromStream(readSide)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating FastStartStreamPayload: ${e.localizedMessage}", e)
+            val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
+            Payload.fromStream(pfd)
+        }
+    }
+
     // 8. Send Video Stream Payload (P2P Transfer)
     fun sendVideoStreamPayload(endpointId: String, uri: Uri): Long? {
         Log.d(TAG, "sendVideoStreamPayload to $endpointId with uri=$uri")
@@ -281,11 +371,10 @@ class NearbyConnectionsManager(private val context: Context) {
                 context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
             } catch (e: Exception) { -1L }
 
-            val pfd: ParcelFileDescriptor? = context.contentResolver.openFileDescriptor(uri, "r")
-            if (pfd != null) {
-                val payload = Payload.fromStream(pfd)
+            val payload = createFastStartStreamPayload(context, uri, fileSize)
+            if (payload != null) {
                 val payloadId = payload.id
-                Log.d(TAG, "Payload.fromStream created. payloadId=$payloadId, fileSize=$fileSize, sending to $endpointId...")
+                Log.d(TAG, "Payload created. payloadId=$payloadId, fileSize=$fileSize, sending to $endpointId...")
 
                 if (fileSize > 0) {
                     expectedFileSizes[payloadId] = fileSize
@@ -302,7 +391,7 @@ class NearbyConnectionsManager(private val context: Context) {
                 }
                 payloadId
             } else {
-                Log.e(TAG, "ParcelFileDescriptor is NULL for uri=$uri")
+                Log.e(TAG, "Failed to create stream payload for uri=$uri")
                 null
             }
         } catch (e: Exception) {
@@ -380,12 +469,13 @@ class NearbyConnectionsManager(private val context: Context) {
                         )
                     }
 
-                    // Auto-send video stream URL to newly connected peer if host has an active video!
+                    // Auto-send video stream URL and P2P payload to newly connected peer if host has an active video!
                     hostVideoUri?.let { videoUri ->
-                        Log.d(TAG, "Peer connected ($endpointId). Auto-sending host video stream URL...")
-                        val localMediaServer = LocalMediaServer(context)
-                        val streamUrl = localMediaServer.getStreamUrl()
+                        Log.d(TAG, "Peer connected ($endpointId). Auto-sending host video stream URL & P2P video payload...")
+                        val server = getActiveLocalMediaServer()
+                        val streamUrl = server.getStreamUrl()
                         sendPayload(endpointId, "STREAM_URL:$streamUrl")
+                        sendVideoStreamPayload(endpointId, videoUri)
                     }
                 }
                 ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {
@@ -402,6 +492,22 @@ class NearbyConnectionsManager(private val context: Context) {
         override fun onDisconnected(endpointId: String) {
             Log.d(TAG, "onDisconnected: endpointId=$endpointId")
             handleDisconnectedEndpoint(endpointId)
+        }
+    }
+
+    private fun isSameSubnet(remoteUrlString: String, localIp: String?): Boolean {
+        if (localIp == null) return false
+        return try {
+            val uri = Uri.parse(remoteUrlString)
+            val host = uri.host ?: return false
+            if (host == "127.0.0.1" || host == "localhost") return true
+            val localParts = localIp.split(".")
+            val hostParts = host.split(".")
+            if (localParts.size == 4 && hostParts.size == 4) {
+                localParts[0] == hostParts[0] && localParts[1] == hostParts[1] && localParts[2] == hostParts[2]
+            } else false
+        } catch (e: Exception) {
+            false
         }
     }
 
@@ -440,8 +546,13 @@ class NearbyConnectionsManager(private val context: Context) {
                         Log.d(TAG, "Received BYTES payload from $endpointId: $message")
                         if (message.startsWith("STREAM_URL:")) {
                             val streamUrl = message.substringAfter("STREAM_URL:")
-                            Log.d(TAG, "Received STREAM_URL payload: $streamUrl. Updating receivedVideoUri for ExoPlayer...")
-                            _uiState.update { it.copy(receivedVideoUri = streamUrl) }
+                            val localIp = getActiveLocalMediaServer().getLocalIpAddress()
+                            if (isSameSubnet(streamUrl, localIp)) {
+                                Log.d(TAG, "Received STREAM_URL payload on same Wi-Fi subnet: $streamUrl. Updating receivedVideoUri for ExoPlayer...")
+                                _uiState.update { it.copy(receivedVideoUri = streamUrl) }
+                            } else {
+                                Log.d(TAG, "Received STREAM_URL payload ($streamUrl), but device is not on same Wi-Fi subnet (localIp=$localIp). Ignoring LAN URL in favor of P2P stream.")
+                            }
                         } else if (message.startsWith("STREAM_META:")) {
                             val parts = message.split(":")
                             if (parts.size >= 3) {
@@ -472,53 +583,45 @@ class NearbyConnectionsManager(private val context: Context) {
                             )
                         }
                         kotlin.concurrent.thread(name = "MeetflixStreamReader_${payload.id}") {
-                            Log.d(TAG, "Started Google Official Non-Blocking Reader Thread for payload ${payload.id}")
+                            Log.d(TAG, "Started Google Official Reader Thread for payload ${payload.id}")
                             try {
                                 var totalBytesRead = 0L
                                 var initialPlayTriggered = false
-                                var lastRead = android.os.SystemClock.elapsedRealtime()
                                 val buffer = ByteArray(64 * 1024)
-                                val localMediaServer = LocalMediaServer(context)
+                                val server = getActiveLocalMediaServer()
 
                                 tempFile.outputStream().use { output ->
                                     while (!Thread.interrupted()) {
-                                        if ((android.os.SystemClock.elapsedRealtime() - lastRead) >= 5000L) {
-                                            Log.d(TAG, "Stream read timeout (5000ms idle) for payload ${payload.id}")
-                                            break
+                                        val dynamicMetaSize = expectedFileSizes[payload.id] ?: -1L
+                                        if (dynamicMetaSize > 0 && server.getExpectedFileSize() <= 0) {
+                                            server.updateExpectedFileSize(dynamicMetaSize)
                                         }
 
-                                        val availableBytes = inputStream.available()
-                                        if (availableBytes > 0) {
-                                            val bytesToRead = availableBytes.coerceAtMost(buffer.size)
-                                            val read = inputStream.read(buffer, 0, bytesToRead)
-                                            if (read > 0) {
-                                                output.write(buffer, 0, read)
-                                                totalBytesRead += read
-                                                lastRead = android.os.SystemClock.elapsedRealtime()
+                                        val read = inputStream.read(buffer, 0, buffer.size)
+                                        if (read <= 0) break
 
-                                                if (!initialPlayTriggered && totalBytesRead >= 512 * 1024) {
-                                                    initialPlayTriggered = true
-                                                    localMediaServer.setMediaFile(tempFile, metaFileSize)
-                                                    val serverUrl = localMediaServer.getServerUrl("127.0.0.1")
-                                                    Log.d(TAG, "Early playback trigger: 512KB buffered! Configured LocalMediaServer with $serverUrl (expectedSize=$metaFileSize)")
-                                                    _uiState.update { current ->
-                                                        if (current.receivedVideoUri == null) {
-                                                            current.copy(
-                                                                receivedVideoUri = serverUrl,
-                                                                transferStatusMessage = "Streaming video & playing..."
-                                                            )
-                                                        } else current
-                                                    }
-                                                }
+                                        output.write(buffer, 0, read)
+                                        totalBytesRead += read
+
+                                        if (!initialPlayTriggered && totalBytesRead >= 512 * 1024) {
+                                            initialPlayTriggered = true
+                                            val expectedSize = expectedFileSizes[payload.id] ?: metaFileSize
+                                            server.setMediaFile(tempFile, expectedSize)
+                                            val serverUrl = server.getServerUrl("127.0.0.1")
+                                            Log.d(TAG, "Early playback trigger: 512KB buffered! Configured LocalMediaServer with $serverUrl (expectedSize=$expectedSize)")
+                                            _uiState.update { current ->
+                                                current.copy(
+                                                    receivedVideoUri = serverUrl,
+                                                    transferStatusMessage = "Streaming video & playing..."
+                                                )
                                             }
-                                        } else {
-                                            Thread.sleep(10L)
                                         }
                                     }
                                 }
                                 Log.d(TAG, "Finished writing STREAM payload ${payload.id}! Total bytes read=$totalBytesRead, fileSize=${tempFile.length()}")
-                                localMediaServer.setMediaFile(tempFile, tempFile.length())
-                                val finalUrl = localMediaServer.getServerUrl("127.0.0.1")
+                                val finalExpectedSize = if ((expectedFileSizes[payload.id] ?: -1L) > 0) expectedFileSizes[payload.id]!! else tempFile.length()
+                                server.setMediaFile(tempFile, finalExpectedSize)
+                                val finalUrl = server.getServerUrl("127.0.0.1")
                                 _uiState.update {
                                     it.copy(
                                         isTransferring = false,

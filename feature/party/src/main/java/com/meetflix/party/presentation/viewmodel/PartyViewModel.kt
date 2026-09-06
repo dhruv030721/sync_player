@@ -123,7 +123,9 @@ class PartyViewModel @Inject constructor(application: Application) : AndroidView
                 _uiState.update { it.copy(isPreparingMedia = false) }
                 nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
                     nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
+                    nearbyConnectionsManager.sendVideoStreamPayload(host.endpointId, videoUri)
                 }
+                playerSyncManager.startChunkStreamingScheduler(getApplication(), videoUri)
             }
         }
     }
@@ -148,7 +150,9 @@ class PartyViewModel @Inject constructor(application: Application) : AndroidView
                 _uiState.update { it.copy(isPreparingMedia = false) }
                 nearbyConnectionsManager.uiState.value.connectedHosts.forEach { host ->
                     nearbyConnectionsManager.sendPayload(host.endpointId, "STREAM_URL:$streamUrl")
+                    nearbyConnectionsManager.sendVideoStreamPayload(host.endpointId, videoUri)
                 }
+                playerSyncManager.startChunkStreamingScheduler(getApplication(), videoUri)
             }
         }
     }

@@ -14,7 +14,9 @@ import com.meetflix.stream.data.LocalMediaServer
 class NearbyRepository private constructor(context: Context) {
 
     val localMediaServer = LocalMediaServer(context.applicationContext).apply { start() }
-    val nearbyConnectionsManager = NearbyConnectionsManager(context.applicationContext)
+    val nearbyConnectionsManager = NearbyConnectionsManager(context.applicationContext).apply {
+        setLocalMediaServer(localMediaServer)
+    }
     val exoPlayerManager = ExoPlayerManager(context.applicationContext)
     val playerSyncManager = PlayerSyncManager(exoPlayerManager, nearbyConnectionsManager)
 

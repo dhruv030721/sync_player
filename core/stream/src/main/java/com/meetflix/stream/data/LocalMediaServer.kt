@@ -8,6 +8,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.OutputStream
 import java.net.Inet4Address
+import java.net.InetSocketAddress
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
@@ -64,10 +65,22 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
         Log.d(TAG, "LocalMediaServer configured with File: ${file.absolutePath}, expectedBytes=$totalExpectedBytes")
     }
 
+    fun updateExpectedFileSize(totalExpectedBytes: Long) {
+        if (totalExpectedBytes > 0L) {
+            this.expectedFileSize = totalExpectedBytes
+            Log.d(TAG, "LocalMediaServer expectedFileSize updated to: $totalExpectedBytes")
+        }
+    }
+
+    fun getExpectedFileSize(): Long = expectedFileSize
+
     fun start() {
-        if (isRunning) return
+        if (isRunning && serverSocket?.isClosed == false) return
         try {
-            serverSocket = ServerSocket(port)
+            val socket = ServerSocket()
+            socket.reuseAddress = true
+            socket.bind(InetSocketAddress(port))
+            serverSocket = socket
             isRunning = true
             Log.d(TAG, "LocalMediaServer started successfully on port $port")
 
@@ -91,7 +104,7 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
 
     private fun handleClientRequest(socket: Socket) {
         try {
-            socket.soTimeout = 10000
+            socket.soTimeout = 60000
             val inputStream = socket.getInputStream()
             val outputStream = socket.getOutputStream()
 
@@ -139,12 +152,19 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
 
             rangeHeader?.let { range ->
                 if (range.startsWith("bytes=")) {
-                    val ranges = range.substringAfter("bytes=").split("-")
-                    if (ranges[0].isNotEmpty()) {
-                        startByte = ranges[0].toLongOrNull() ?: 0L
-                    }
-                    if (ranges.size > 1 && ranges[1].isNotEmpty()) {
-                        endByte = ranges[1].toLongOrNull() ?: (fileSize - 1L)
+                    val rangeSpec = range.substringAfter("bytes=").trim()
+                    val ranges = rangeSpec.split("-")
+                    if (ranges[0].isEmpty() && ranges.size > 1 && ranges[1].isNotEmpty()) {
+                        val suffixLen = ranges[1].toLongOrNull() ?: 0L
+                        startByte = (fileSize - suffixLen).coerceAtLeast(0L)
+                        endByte = fileSize - 1L
+                    } else {
+                        if (ranges[0].isNotEmpty()) {
+                            startByte = ranges[0].toLongOrNull() ?: 0L
+                        }
+                        if (ranges.size > 1 && ranges[1].isNotEmpty()) {
+                            endByte = ranges[1].toLongOrNull() ?: (fileSize - 1L)
+                        }
                     }
                 }
             }
@@ -197,7 +217,9 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
 
         if (file != null && file.exists()) {
             FileInputStream(file).use { fis ->
-                fis.skip(startByte)
+                if (startByte > 0) {
+                    fis.channel.position(startByte)
+                }
                 var idleAttempts = 0
                 while (remainingBytes > 0) {
                     val bytesToRead = remainingBytes.coerceAtMost(buffer.size.toLong()).toInt()
@@ -208,7 +230,7 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
                         remainingBytes -= read
                     } else {
                         // File currently hasn't reached remainingBytes; wait for background writer thread
-                        if (expectedFileSize > 0 && file.length() < expectedFileSize && idleAttempts < 100) {
+                        if (expectedFileSize > 0 && file.length() < expectedFileSize && idleAttempts < 1200) {
                             idleAttempts++
                             Thread.sleep(50L)
                         } else {
@@ -221,7 +243,9 @@ class LocalMediaServer(private val context: Context, private val port: Int = 808
             val pfd: ParcelFileDescriptor? = context.contentResolver.openFileDescriptor(uri, "r")
             pfd?.use { fd ->
                 FileInputStream(fd.fileDescriptor).use { fis ->
-                    fis.skip(startByte)
+                    if (startByte > 0) {
+                        fis.channel.position(startByte)
+                    }
                     while (remainingBytes > 0) {
                         val bytesToRead = remainingBytes.coerceAtMost(buffer.size.toLong()).toInt()
                         val read = fis.read(buffer, 0, bytesToRead)

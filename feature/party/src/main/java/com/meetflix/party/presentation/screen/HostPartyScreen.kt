@@ -78,6 +78,12 @@ fun HostPartyScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (ignored: Exception) {}
             PartyRoomActivity.launchAsHost(context, it, "Hosted Watch Party")
         }
     }
